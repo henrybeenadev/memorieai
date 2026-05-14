@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docs — MemorieAI</title>
+  <meta name="description" content="MemorieAI developer documentation: quickstart, configuration, browser tools reference, multi-tenant architecture, and more.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0f;
+      --white: #fafafa;
+      --blue-dark: #004488;
+      --blue: #0077cc;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #767676;
+      --gray-500: #6b7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --sidebar-w: 260px;
+      --nav-h: 60px;
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Comfortaa', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--white); color: var(--gray-900);
+      line-height: 1.6; overflow-x: hidden;
+    }
+
+    /* ── Nav ──────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(250,250,250,.92); backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 40px; height: var(--nav-h);
+      display: flex; align-items: center; gap: 28px;
+    }
+    .nav-logo {
+      font-size: 18px; font-weight: 700; letter-spacing: -.5px;
+      color: var(--blue-dark); white-space: nowrap; text-decoration: none;
+    }
+    .nav-links { display: flex; gap: 24px; margin-left: auto; }
+    .nav-links a {
+      font-size: 13px; font-weight: 700; color: var(--gray-500);
+      text-decoration: none; transition: color .15s;
+      min-height: 44px; display: inline-flex; align-items: center;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--gray-900); }
+    .nav-links a.active { color: var(--blue-dark); }
+    .nav-cta {
+      padding: 10px 18px; border-radius: 20px;
+      background: var(--black); color: var(--white);
+      font-size: 13px; font-weight: 700; text-decoration: none;
+      transition: background .15s, transform .1s; white-space: nowrap;
+    }
+    .nav-cta:hover { background: #222; transform: translateY(-1px); }
+
+    /* Lang toggle */
+    .lang-toggle {
+      display: flex; background: var(--gray-100); border-radius: 20px;
+      padding: 3px; gap: 2px; flex-shrink: 0;
+    }
+    .lang-btn {
+      background: none; border: none; cursor: pointer;
+      padding: 4px 10px; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+      color: var(--gray-500); border-radius: 16px; font-family: inherit;
+      min-height: 28px; min-width: 32px; transition: background .15s, color .15s;
+    }
+    .lang-btn.active { background: var(--white); color: var(--gray-900); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .lang-btn:hover:not(.active) { color: var(--gray-700); }
+
+    /* ── Layout ───────────────────────────────────────────────────────── */
+    .docs-layout {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      min-height: calc(100vh - var(--nav-h));
+    }
+
+    /* ── Sidebar ──────────────────────────────────────────────────────── */
+    .docs-sidebar {
+      border-right: 1px solid var(--gray-200);
+      position: sticky; top: var(--nav-h);
+      height: calc(100vh - var(--nav-h)); overflow-y: auto;
+      padding: 32px 0 48px; background: var(--gray-50);
+    }
+    .docs-sidebar::-webkit-scrollbar { width: 4px; }
+    .docs-sidebar::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+    .sidebar-group { margin-bottom: 32px; }
+    .sidebar-group-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--gray-400); padding: 0 24px; margin-bottom: 6px;
+    }
+    .sidebar-link {
+      display: block; font-size: 13px; font-weight: 700; color: var(--gray-500);
+      text-decoration: none; padding: 7px 24px; transition: color .12s, background .12s;
+      border-left: 2px solid transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sidebar-link:hover { color: var(--gray-900); background: var(--gray-100); }
+    .sidebar-link.active { color: var(--blue-dark); border-left-color: var(--blue-dark); background: rgba(0,68,136,.05); }
+    .sidebar-sub {
+      display: block; font-size: 12px; font-weight: 400; color: var(--gray-400);
+      text-decoration: none; padding: 5px 24px 5px 36px; transition: color .12s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sidebar-sub:hover { color: var(--gray-700); }
+    .sidebar-sub.active { color: var(--blue-dark); }
+
+    /* ── Content ──────────────────────────────────────────────────────── */
+    .docs-content {
+      padding: 52px 64px 120px 56px;
+      max-width: 800px;
+    }
+    .docs-content h1 {
+      font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 700;
+      letter-spacing: -0.0625rem; line-height: 1.1; color: var(--gray-900);
+      margin-bottom: 14px;
+    }
+    .docs-content .page-lead {
+      font-size: 1.0625rem; color: var(--gray-500); line-height: 1.75;
+      max-width: 60ch; margin-bottom: 48px;
+    }
+    .docs-content h2 {
+      font-size: 1.25rem; font-weight: 700; letter-spacing: -0.03rem;
+      color: var(--gray-900); margin: 56px 0 14px;
+      padding-top: 56px; border-top: 1px solid var(--gray-200);
+      scroll-margin-top: calc(var(--nav-h) + 24px);
+    }
+    .docs-content h2:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
+    .docs-content h3 {
+      font-size: 1rem; font-weight: 700; color: var(--gray-900);
+      margin: 28px 0 10px; scroll-margin-top: calc(var(--nav-h) + 24px);
+    }
+    .docs-content p {
+      font-size: 0.9375rem; color: var(--gray-500); line-height: 1.8;
+      margin-bottom: 16px; max-width: 65ch; overflow-wrap: break-word;
+    }
+    .docs-content ul, .docs-content ol {
+      padding-left: 20px; margin-bottom: 16px;
+    }
+    .docs-content li {
+      font-size: 0.9375rem; color: var(--gray-500); line-height: 1.8;
+      margin-bottom: 6px; overflow-wrap: break-word;
+    }
+    .docs-content a { color: var(--blue-dark); text-decoration: none; font-weight: 700; }
+    .docs-content a:hover { text-decoration: underline; }
+    .docs-content strong { color: var(--gray-900); }
+
+    /* Inline code */
+    code {
+      background: var(--gray-100); padding: 2px 7px; border-radius: 5px;
+      font-size: 0.8125rem; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      color: var(--blue-dark); word-break: break-all;
+    }
+
+    /* Code blocks */
+    .code-wrap { position: relative; margin: 16px 0 24px; }
+    .code-block {
+      background: #0d1117; border-radius: 12px; padding: 20px 24px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 13px; line-height: 1.75; color: #e6edf3;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    .code-block .comment { color: #8b949e; }
+    .code-block .str     { color: #a5d6ff; }
+    .code-block .kw      { color: #ff7b72; }
+    .code-block .attr    { color: #79c0ff; }
+    .code-block .num     { color: #f2cc60; }
+    .code-lang {
+      position: absolute; top: 10px; right: 52px;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: rgba(255,255,255,.25); font-family: 'Comfortaa', sans-serif;
+      pointer-events: none;
+    }
+    .copy-btn {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(255,255,255,.08); border: none; border-radius: 6px;
+      padding: 5px 10px; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+      color: rgba(255,255,255,.45); cursor: pointer; font-family: inherit;
+      transition: background .15s, color .15s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,.16); color: rgba(255,255,255,.8); }
+    .copy-btn.copied { color: #3fb950; background: rgba(63,185,80,.12); }
+
+    /* Callouts */
+    .callout {
+      border-radius: 10px; padding: 14px 18px; margin: 20px 0;
+      display: flex; gap: 12px; align-items: flex-start;
+    }
+    .callout.info { background: rgba(0,119,204,.06); border: 1px solid rgba(0,119,204,.18); }
+    .callout.warn { background: rgba(234,179,8,.06);  border: 1px solid rgba(234,179,8,.25); }
+    .callout.tip  { background: rgba(52,199,89,.06);  border: 1px solid rgba(52,199,89,.2); }
+    .callout-icon { font-size: 15px; flex-shrink: 0; margin-top: 2px; }
+    .callout p { margin: 0; font-size: 0.875rem; line-height: 1.7; color: var(--gray-700); max-width: none; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 16px 0 24px; border-radius: 10px; border: 1px solid var(--gray-200); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    th {
+      text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .5px;
+      text-transform: uppercase; color: var(--gray-400);
+      padding: 10px 16px; border-bottom: 1px solid var(--gray-200);
+      background: var(--gray-50); white-space: nowrap;
+    }
+    td { padding: 11px 16px; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    td:first-child { font-family: 'SF Mono', monospace; color: var(--blue-dark); font-size: 0.8125rem; white-space: nowrap; }
+    td.td-default { color: var(--gray-400); font-family: 'SF Mono', monospace; font-size: 0.8125rem; }
+    td.td-desc { color: var(--gray-500); line-height: 1.6; overflow-wrap: break-word; word-break: break-word; hyphens: auto; }
+
+    /* Tool badge */
+    .tool-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(0,68,136,.07); border: 1px solid rgba(0,68,136,.15);
+      border-radius: 8px; padding: 3px 10px; font-size: 12px; font-weight: 700;
+      color: var(--blue-dark); font-family: 'SF Mono', monospace;
+      margin-bottom: 8px;
+    }
+    .tool-section { margin-bottom: 36px; }
+
+    /* Step flow */
+    .flow-steps { counter-reset: flow; list-style: none; padding: 0; margin: 16px 0 24px; }
+    .flow-steps li {
+      counter-increment: flow;
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 12px 0; border-bottom: 1px solid var(--gray-100);
+    }
+    .flow-steps li:last-child { border-bottom: none; }
+    .flow-steps li::before {
+      content: counter(flow);
+      display: flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--blue-dark); color: var(--white);
+      font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+    }
+    .flow-steps li p { margin: 0; }
+
+    /* Breadcrumb */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--gray-400); margin-bottom: 20px;
+    }
+    .breadcrumb a { color: var(--gray-400); text-decoration: none; font-weight: 400; }
+    .breadcrumb a:hover { color: var(--blue-dark); }
+    .breadcrumb-sep { color: var(--gray-300); }
+
+    /* "On this page" mobile bar */
+    .mobile-toc {
+      display: none;
+      background: var(--gray-50); border-bottom: 1px solid var(--gray-200);
+      padding: 12px 20px;
+    }
+    .mobile-toc-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gray-400); margin-bottom: 8px; }
+    .mobile-toc-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .mobile-toc-links a {
+      font-size: 12px; font-weight: 700; color: var(--gray-500);
+      text-decoration: none; padding: 4px 10px;
+      background: var(--white); border: 1px solid var(--gray-200);
+      border-radius: 20px; transition: color .12s, border-color .12s;
+    }
+    .mobile-toc-links a:hover { color: var(--blue-dark); border-color: var(--blue-dark); }
+
+    /* Footer */
+    .docs-footer {
+      background: #0a0a0f; color: rgba(255,255,255,.45);
+      padding: 48px 40px 32px;
+    }
+    .docs-footer-inner {
+      max-width: 1080px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: flex-end;
+      flex-wrap: wrap; gap: 24px;
+    }
+    .docs-footer .nav-logo { font-size: 16px; display: block; margin-bottom: 8px; color: rgba(255,255,255,.8); }
+    .docs-footer p { font-size: 13px; }
+    .docs-footer-links { display: flex; gap: 20px; font-size: 13px; flex-wrap: wrap; }
+    .docs-footer-links a { color: rgba(255,255,255,.45); text-decoration: none; transition: color .15s; }
+    .docs-footer-links a:hover { color: rgba(255,255,255,.8); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      nav { padding: 0 20px; gap: 14px; }
+      .nav-links { display: none; }
+      .nav-cta { display: none; }
+      .docs-layout { grid-template-columns: 1fr; }
+      .docs-sidebar { display: none; }
+      .mobile-toc { display: block; }
+      .docs-content { padding: 32px 24px 80px; max-width: none; }
+      .docs-footer { padding: 40px 24px 28px; }
+      .docs-footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+    @media (max-width: 600px) {
+      nav { padding: 0 16px; gap: 10px; }
+      .docs-content { padding: 24px 16px 64px; }
+    }
+    @media (max-height: 480px) and (orientation: landscape) {
+      nav { height: 52px; }
+      .docs-layout { min-height: calc(100vh - 52px); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Focus */
+    :focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(0,119,204,.35); border-radius: 4px; }
+
+    /* Section anchor offset */
+    .docs-content section { scroll-margin-top: calc(var(--nav-h) + 16px); }
+  </style>
+</head>
+<body>
+
+  <a href="#docs-main" class="skip-link" style="position:absolute;top:-100%;left:16px;z-index:9999;background:#0a0a0f;color:#fff;padding:8px 20px;border-radius:8px;font-size:.875rem;font-weight:700;text-decoration:none;transition:top .15s;white-space:nowrap;" onfocus="this.style.top='8px'" onblur="this.style.top=''">Skip to content</a>
+
+  <!-- Nav -->
+  <nav>
+    <a class="nav-logo" href="landing-v2.html">MemorieAI</a>
+    <div class="nav-links">
+      <a href="landing-v2.html#how-it-works" data-i18n="nav.how">How It Works</a>
+      <a href="landing-v2.html#features" data-i18n="nav.features">Features</a>
+      <a href="landing-v2.html#pricing" data-i18n="nav.pricing">Pricing</a>
+      <a href="docs.html" class="active" data-i18n="nav.docs">Docs</a>
+    </div>
+    <div class="lang-toggle" role="group" aria-label="Language / Idioma">
+      <button class="lang-btn active" data-lang="en" aria-pressed="true">EN</button>
+      <button class="lang-btn" data-lang="es" aria-pressed="false">ES</button>
+    </div>
+    <a class="nav-cta" href="mailto:josuedpinedad@gmail.com" data-i18n="nav.cta">Get Early Access</a>
+  </nav>
+  <div aria-live="polite" aria-atomic="true" id="lang-announcer" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;"></div>
+
+  <!-- Mobile TOC -->
+  <div class="mobile-toc">
+    <div class="mobile-toc-label" data-i18n="docs.toc">On this page</div>
+    <div class="mobile-toc-links">
+      <a href="#quickstart" data-i18n="docs.s.quickstart">Quickstart</a>
+      <a href="#how-it-works" data-i18n="docs.s.how">How It Works</a>
+      <a href="#configuration" data-i18n="docs.s.config">Configuration</a>
+      <a href="#tools" data-i18n="docs.s.tools">Tools</a>
+      <a href="#advanced" data-i18n="docs.s.advanced">Advanced</a>
+      <a href="#faq" data-i18n="docs.s.faq">FAQ</a>
+    </div>
+  </div>
+
+  <div class="docs-layout">
+
+    <!-- Sidebar -->
+    <aside class="docs-sidebar" aria-label="Documentation navigation">
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.start">Getting Started</div>
+        <a class="sidebar-link active" href="#quickstart" data-i18n="docs.s.quickstart">Quickstart</a>
+        <a class="sidebar-sub" href="#install" data-i18n="docs.s.install">Installation</a>
+        <a class="sidebar-sub" href="#verify" data-i18n="docs.s.verify">Verify It Works</a>
+        <a class="sidebar-link" href="#how-it-works" data-i18n="docs.s.how">How It Works</a>
+        <a class="sidebar-sub" href="#semantic-map" data-i18n="docs.s.semantic">Semantic Map</a>
+        <a class="sidebar-sub" href="#tool-pipeline" data-i18n="docs.s.pipeline">Tool Pipeline</a>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.config">Configuration</div>
+        <a class="sidebar-link" href="#configuration" data-i18n="docs.s.config">Configuration</a>
+        <a class="sidebar-sub" href="#data-attributes" data-i18n="docs.s.attrs">Data Attributes</a>
+        <a class="sidebar-sub" href="#custom-prompt" data-i18n="docs.s.prompt">Custom Prompt</a>
+        <a class="sidebar-sub" href="#prompt-example" data-i18n="docs.s.promptex">Prompt Template</a>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.tools">Tools Reference</div>
+        <a class="sidebar-link" href="#tools" data-i18n="docs.s.tools">Browser Tools</a>
+        <a class="sidebar-sub" href="#navigate">navigate_to</a>
+        <a class="sidebar-sub" href="#highlight">highlight_element</a>
+        <a class="sidebar-sub" href="#click">click_element</a>
+        <a class="sidebar-sub" href="#fill">fill_field</a>
+        <a class="sidebar-sub" href="#scroll">scroll_to</a>
+        <a class="sidebar-sub" href="#read">read_content</a>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.advanced">Advanced</div>
+        <a class="sidebar-link" href="#advanced" data-i18n="docs.s.advanced">Advanced</a>
+        <a class="sidebar-sub" href="#multi-tenant" data-i18n="docs.s.multitenant">Multi-Tenant</a>
+        <a class="sidebar-sub" href="#domain-lock" data-i18n="docs.s.domain">Domain Locking</a>
+        <a class="sidebar-sub" href="#languages" data-i18n="docs.s.langs">Languages</a>
+        <a class="sidebar-sub" href="#knowledge-base" data-i18n="docs.s.kb">Knowledge Base</a>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.ref">Reference</div>
+        <a class="sidebar-link" href="#faq" data-i18n="docs.s.faq">FAQ</a>
+        <a class="sidebar-link" href="mailto:josuedpinedad@gmail.com" data-i18n="docs.s.support">Support</a>
+      </div>
+    </aside>
+
+    <!-- Content -->
+    <main class="docs-content" id="docs-main">
+
+      <div class="breadcrumb">
+        <a href="landing-v2.html">MemorieAI</a>
+        <span class="breadcrumb-sep">›</span>
+        <span data-i18n="docs.title">Documentation</span>
+      </div>
+
+      <h1 data-i18n="docs.h1">Build with MemorieAI</h1>
+      <p class="page-lead" data-i18n="docs.lead">Everything you need to add a voice-powered guide to your website in under 5 minutes. No build tools. No framework lock-in. One script tag.</p>
+
+      <!-- ── Quickstart ─────────────────────────────────────── -->
+      <section>
+        <h2 id="quickstart" data-i18n="docs.s.quickstart">Quickstart</h2>
+        <p data-i18n="docs.qs.p1">Paste this script tag before <code>&lt;/body&gt;</code> on any page. That's the entire integration.</p>
+
+        <h3 id="install" data-i18n="docs.s.install">Installation</h3>
+        <div class="code-wrap">
+          <span class="code-lang">HTML</span>
+          <button class="copy-btn" data-copy='&lt;script src="https://cdn.memorie.ai/embed.js" data-key="YOUR_API_KEY"&gt;&lt;/script&gt;'>Copy</button>
+          <div class="code-block"><span class="attr">&lt;script</span>
+  <span class="str">src</span>=<span class="str">"https://cdn.memorie.ai/embed.js"</span>
+  <span class="str">data-key</span>=<span class="str">"YOUR_API_KEY"</span><span class="attr">&gt;&lt;/script&gt;</span></div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <p data-i18n="docs.qs.callout"><strong>No API key yet?</strong> <a href="mailto:josuedpinedad@gmail.com">Request early access</a> and we'll set you up within 24 hours.</p>
+        </div>
+
+        <p data-i18n="docs.qs.p2">The MemorieAI bubble appears in the bottom-right corner. Your users click it, speak or type their request, and the assistant guides them through your site in real time.</p>
+
+        <h3 id="verify" data-i18n="docs.s.verify">Verify It Works</h3>
+        <p data-i18n="docs.qs.verify.p">Open your browser console after loading the page with the script. You should see:</p>
+        <div class="code-wrap">
+          <span class="code-lang">CONSOLE</span>
+          <div class="code-block"><span class="comment">[MemorieAI] Embed loaded · key: mai_live_xxxxx · domain: yourdomain.com</span>
+<span class="comment">[MemorieAI] Page map built · 42 elements indexed</span>
+<span class="comment">[MemorieAI] Ready</span></div>
+        </div>
+        <p data-i18n="docs.qs.verify.p2">If you see a <code>403 domain_not_allowed</code> error, your domain has not been registered for your API key. See <a href="#domain-lock">Domain Locking</a>.</p>
+      </section>
+
+      <!-- ── How It Works ──────────────────────────────────── -->
+      <section>
+        <h2 id="how-it-works" data-i18n="docs.s.how">How It Works</h2>
+        <p data-i18n="docs.how.p1">MemorieAI operates as a thin layer on top of your existing website. It reads the live DOM, understands intent through voice or text, selects the right tool, and executes it. Nothing is pre-trained on your site.</p>
+
+        <h3 id="semantic-map" data-i18n="docs.s.semantic">Semantic Map</h3>
+        <p data-i18n="docs.how.sem.p1">On every page load, the embed script builds a <strong>semantic map</strong>: a structured index of visible interactive elements. This map is what the AI "sees" about your page.</p>
+        <p data-i18n="docs.how.sem.p2">Each element in the map includes: tag name, visible text, ARIA labels, role, viewport position (above / visible / below), and estimated area. The map is rebuilt automatically after any navigation.</p>
+        <div class="callout tip">
+          <span class="callout-icon">💡</span>
+          <p data-i18n="docs.how.sem.tip">Elements with descriptive ARIA labels, meaningful button text, and semantic HTML are indexed much more reliably than unlabeled icon buttons or generic "click here" links.</p>
+        </div>
+
+        <h3 id="tool-pipeline" data-i18n="docs.s.pipeline">Tool Pipeline</h3>
+        <p data-i18n="docs.how.pipe.p">When a user speaks or types a request, this sequence runs:</p>
+        <ol class="flow-steps">
+          <li><p data-i18n="docs.how.pipe.1"><strong>Intent detection:</strong> The AI parses the user's request and maps it to one or more browser tools.</p></li>
+          <li><p data-i18n="docs.how.pipe.2"><strong>Selector resolution:</strong> The AI picks a target element from the semantic map using the best available descriptor (text, role, position).</p></li>
+          <li><p data-i18n="docs.how.pipe.3"><strong>Tool execution:</strong> The tool runs on the live page: navigate, highlight, click, fill, scroll, or read.</p></li>
+          <li><p data-i18n="docs.how.pipe.4"><strong>Map refresh:</strong> After any navigation, the semantic map is rebuilt for the new page before the next tool can run.</p></li>
+          <li><p data-i18n="docs.how.pipe.5"><strong>Voice feedback:</strong> The assistant speaks the result back to the user.</p></li>
+        </ol>
+      </section>
+
+      <!-- ── Configuration ─────────────────────────────────── -->
+      <section>
+        <h2 id="configuration" data-i18n="docs.s.config">Configuration</h2>
+        <p data-i18n="docs.cfg.p1">All configuration is done through <code>data-*</code> attributes on the script tag. No separate config file, no dashboard required for basic setup.</p>
+
+        <h3 id="data-attributes" data-i18n="docs.s.attrs">Data Attributes</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="docs.table.attr">Attribute</th>
+                <th data-i18n="docs.table.default">Default</th>
+                <th data-i18n="docs.table.desc">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>data-key</td>
+                <td class="td-default">—</td>
+                <td class="td-desc" data-i18n="docs.attr.key">Your MemorieAI API key. Required. Obtain from the dashboard after signing up.</td>
+              </tr>
+              <tr>
+                <td>data-lang</td>
+                <td class="td-default">auto</td>
+                <td class="td-desc" data-i18n="docs.attr.lang">Force a language: <code>en</code>, <code>es</code>. Defaults to browser locale detection.</td>
+              </tr>
+              <tr>
+                <td>data-position</td>
+                <td class="td-default">bottom-right</td>
+                <td class="td-desc" data-i18n="docs.attr.pos">Bubble position: <code>bottom-right</code> or <code>bottom-left</code>.</td>
+              </tr>
+              <tr>
+                <td>data-theme</td>
+                <td class="td-default">auto</td>
+                <td class="td-desc" data-i18n="docs.attr.theme">Color theme: <code>light</code>, <code>dark</code>, or <code>auto</code> (follows system preference).</td>
+              </tr>
+              <tr>
+                <td>data-color</td>
+                <td class="td-default">#004488</td>
+                <td class="td-desc" data-i18n="docs.attr.color">Primary accent color (hex). Applied to the bubble, highlights, and panel accents.</td>
+              </tr>
+              <tr>
+                <td>data-label</td>
+                <td class="td-default">MemorieAI</td>
+                <td class="td-desc" data-i18n="docs.attr.label">Name shown in the panel header and in the assistant's speech.</td>
+              </tr>
+              <tr>
+                <td>data-assistant</td>
+                <td class="td-default">—</td>
+                <td class="td-desc" data-i18n="docs.attr.assistant">Pro / Enterprise. Your custom Vapi assistant ID, overriding the default MemorieAI assistant.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-wrap">
+          <span class="code-lang">HTML</span>
+          <button class="copy-btn" data-copy="<script&#10;  src=&quot;https://cdn.memorie.ai/embed.js&quot;&#10;  data-key=&quot;YOUR_API_KEY&quot;&#10;  data-lang=&quot;es&quot;&#10;  data-position=&quot;bottom-right&quot;&#10;  data-theme=&quot;auto&quot;&#10;  data-color=&quot;#004488&quot;&#10;  data-label=&quot;Guía Digital&quot;&#10;>&lt;/script&gt;">Copy</button>
+          <div class="code-block"><span class="attr">&lt;script</span>
+  <span class="str">src</span>=<span class="str">"https://cdn.memorie.ai/embed.js"</span>
+  <span class="str">data-key</span>=<span class="str">"YOUR_API_KEY"</span>
+  <span class="str">data-lang</span>=<span class="str">"es"</span>
+  <span class="str">data-position</span>=<span class="str">"bottom-right"</span>
+  <span class="str">data-theme</span>=<span class="str">"auto"</span>
+  <span class="str">data-color</span>=<span class="str">"#004488"</span>
+  <span class="str">data-label</span>=<span class="str">"Guía Digital"</span>
+<span class="attr">&gt;&lt;/script&gt;</span></div>
+        </div>
+
+        <h3 id="custom-prompt" data-i18n="docs.s.prompt">Custom Prompt</h3>
+        <p data-i18n="docs.cfg.prompt.p1">Pro and Enterprise customers can write a custom system prompt per site from the dashboard. The prompt tells the assistant about your site's structure, key workflows, and personality. The live page map is injected automatically — you don't need to describe every page.</p>
+        <div class="callout tip">
+          <span class="callout-icon">💡</span>
+          <p data-i18n="docs.cfg.prompt.tip">Include <strong>exact URL paths</strong> for your most common workflows. The assistant will navigate directly to them when user intent matches, instead of relying on the page map alone.</p>
+        </div>
+
+        <h3 id="prompt-example" data-i18n="docs.s.promptex">Prompt Template</h3>
+        <div class="code-wrap">
+          <span class="code-lang">PROMPT</span>
+          <button class="copy-btn" data-copy="You are the digital guide for [Your Org]. Help users navigate [your site].&#10;&#10;KEY PAGES:&#10;- Dashboard: /dashboard&#10;- Billing: /settings/billing&#10;- [Add your pages...]&#10;&#10;WORKFLOWS:&#10;1. PAY BILL → [URL] → [element to click]&#10;2. [Add your workflows...]&#10;&#10;TONE: Friendly and concise. Prefer one sentence responses.">Copy</button>
+          <div class="code-block"><span class="comment">You are the digital guide for [Your Org].</span>
+<span class="comment">Help users navigate [your site].</span>
+
+<span class="kw">KEY PAGES:</span>
+- Dashboard: <span class="str">/dashboard</span>
+- Billing: <span class="str">/settings/billing</span>
+- [Add your pages…]
+
+<span class="kw">WORKFLOWS:</span>
+1. PAY BILL → <span class="str">[URL]</span> → <span class="str">[element to click]</span>
+2. [Add your workflows…]
+
+<span class="kw">TONE:</span> Friendly and concise. One sentence preferred.</div>
+        </div>
+
+        <p data-i18n="docs.cfg.prompt.p2">For the Miramar, FL deployment, the system prompt includes all 17 city departments, 40+ services, and their exact URLs — enabling the assistant to navigate directly without searching.</p>
+      </section>
+
+      <!-- ── Tools Reference ───────────────────────────────── -->
+      <section>
+        <h2 id="tools" data-i18n="docs.s.tools">Browser Tools</h2>
+        <p data-i18n="docs.tools.p1">MemorieAI has six tools it can call on any page. Selectors are always drawn from the live semantic map — the AI never invents IDs or guesses URLs.</p>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="navigate">navigate_to</div>
+          <p data-i18n="docs.tools.nav.p"><strong>Parameters:</strong> <code>url</code> (string, required)</p>
+          <p data-i18n="docs.tools.nav.desc">Navigates the current tab to any URL — relative (<code>/pay-bills</code>) or absolute (<code>https://…</code>). After the page loads, the semantic map is automatically rebuilt before any subsequent tool can run. This prevents race conditions when navigate and highlight are called in the same batch.</p>
+          <div class="code-wrap">
+            <span class="code-lang">EXAMPLE</span>
+            <div class="code-block"><span class="comment">// User says: "Pay my water bill"</span>
+{ <span class="attr">tool</span>: <span class="str">"navigate_to"</span>, <span class="attr">url</span>: <span class="str">"/residents/utilities/water-billing"</span> }</div>
+          </div>
+        </div>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="highlight">highlight_element</div>
+          <p data-i18n="docs.tools.hl.p"><strong>Parameters:</strong> <code>selector</code> (string, required)</p>
+          <p data-i18n="docs.tools.hl.desc">Places a glowing animated border on the matched element so the user can see exactly where to look or click. The selector is a natural-language description ("Pay Now button", "Search field") resolved by a 5-stage fuzzy matching pipeline: exact ID → exact text → fuzzy text → scoring → best candidate.</p>
+        </div>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="click">click_element</div>
+          <p data-i18n="docs.tools.click.p"><strong>Parameters:</strong> <code>selector</code> (string, required)</p>
+          <p data-i18n="docs.tools.click.desc">Programmatically clicks a button, link, tab, or any interactive element. Uses the same selector resolution as <code>highlight_element</code>. Fires a native browser click event — works with React, Vue, Angular, and vanilla DOM listeners.</p>
+        </div>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="fill">fill_field</div>
+          <p data-i18n="docs.tools.fill.p"><strong>Parameters:</strong> <code>selector</code> (string), <code>text</code> (string, required)</p>
+          <p data-i18n="docs.tools.fill.desc">Types text into an input, textarea, or <code>contenteditable</code> element. Fires <code>input</code> and <code>change</code> events so framework bindings stay in sync. Does not submit the form — the user retains control over submission.</p>
+        </div>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="scroll">scroll_to</div>
+          <p data-i18n="docs.tools.scroll.p"><strong>Parameters:</strong> <code>selector</code> (string, required)</p>
+          <p data-i18n="docs.tools.scroll.desc">Smooth-scrolls the page until the matched element is in the viewport. Useful for directing attention without clicking. Respects <code>prefers-reduced-motion</code>: uses instant scroll when the user has animations disabled.</p>
+        </div>
+
+        <div class="tool-section">
+          <div class="tool-badge" id="read">read_content</div>
+          <p data-i18n="docs.tools.read.p"><strong>Parameters:</strong> <code>selector</code> (string, required)</p>
+          <p data-i18n="docs.tools.read.desc">Reads the text content of an element aloud to the user via the voice interface. Useful for reading table values, error messages, or form summaries that the user may not see clearly.</p>
+        </div>
+      </section>
+
+      <!-- ── Advanced ──────────────────────────────────────── -->
+      <section>
+        <h2 id="advanced" data-i18n="docs.s.advanced">Advanced</h2>
+
+        <h3 id="multi-tenant" data-i18n="docs.s.multitenant">Multi-Tenant Architecture</h3>
+        <p data-i18n="docs.adv.mt.p1">Each customer gets a unique <code>data-key</code>. The key is validated server-side against the requesting origin on every session start. A key registered for <code>acme.com</code> will not work on any other domain.</p>
+        <div class="code-wrap">
+          <span class="code-lang">AUTH FLOW</span>
+          <div class="code-block"><span class="comment">1. Browser loads embed.js with data-key</span>
+<span class="comment">2. Embed POSTs /v1/auth { key, origin }</span>
+<span class="comment">3. Server validates key + origin match</span>
+<span class="comment">4. Returns { sessionToken, assistantId }</span>
+<span class="comment">   (Vapi keys never exposed to browser)</span>
+<span class="comment">5. Vapi WebRTC session starts</span></div>
+        </div>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <p data-i18n="docs.adv.mt.warn">The Vapi API key and assistant ID are <strong>never exposed to the browser</strong>. They live only on the MemorieAI backend and are returned as short-lived session tokens scoped to the request origin.</p>
+        </div>
+
+        <h3 id="domain-lock" data-i18n="docs.s.domain">Domain Locking</h3>
+        <p data-i18n="docs.adv.dl.p1">From your dashboard, register every origin your key is allowed to serve. Requests from unlisted origins are rejected with a <code>403 domain_not_allowed</code> error before any Vapi session is created.</p>
+        <p data-i18n="docs.adv.dl.p2"><code>localhost</code>, <code>127.0.0.1</code>, and <code>localhost:*</code> are always allowed in development — no registration needed.</p>
+        <div class="code-wrap">
+          <span class="code-lang">ALLOWED ORIGINS EXAMPLE</span>
+          <div class="code-block">https://miramarfl.gov
+https://www.miramarfl.gov
+https://staging.miramarfl.gov
+<span class="comment"># localhost auto-allowed in dev</span></div>
+        </div>
+
+        <h3 id="languages" data-i18n="docs.s.langs">Languages</h3>
+        <p data-i18n="docs.adv.langs.p1">MemorieAI detects the user's preferred language from their browser locale and from the language they speak or type. The assistant responds in the same language automatically.</p>
+        <p data-i18n="docs.adv.langs.p2">Force a specific language with <code>data-lang</code>:</p>
+        <div class="code-wrap">
+          <span class="code-lang">HTML</span>
+          <div class="code-block"><span class="attr">&lt;script</span> <span class="str">src</span>=<span class="str">"…"</span> <span class="str">data-key</span>=<span class="str">"…"</span> <span class="str">data-lang</span>=<span class="str">"es"</span><span class="attr">&gt;&lt;/script&gt;</span></div>
+        </div>
+        <p data-i18n="docs.adv.langs.supported">Currently well-tested languages:</p>
+        <ul>
+          <li data-i18n="docs.adv.langs.en">English (en) — full support</li>
+          <li data-i18n="docs.adv.langs.es">Spanish (es) — full support; primary language for Miramar, FL deployment</li>
+          <li data-i18n="docs.adv.langs.more">Additional languages on request — <a href="mailto:josuedpinedad@gmail.com">contact us</a></li>
+        </ul>
+
+        <h3 id="knowledge-base" data-i18n="docs.s.kb">Knowledge Base</h3>
+        <p data-i18n="docs.adv.kb.p1">For government and enterprise deployments, MemorieAI supports a structured knowledge base that maps user intents directly to pages and elements without relying on the AI alone.</p>
+        <p data-i18n="docs.adv.kb.p2">Two JSON files power the Miramar deployment:</p>
+        <ul>
+          <li><strong>site-index.json</strong> — <span data-i18n="docs.adv.kb.siteindex">Maps URLs to department names, sections, and available actions. Used to resolve "where is X" questions.</span></li>
+          <li><strong>intent-directory.json</strong> — <span data-i18n="docs.adv.kb.intent">Maps intent keywords to direct navigate + highlight actions. Bypasses the AI for the 40 most common city service requests.</span></li>
+        </ul>
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <p data-i18n="docs.adv.kb.callout">Enterprise customers can provide their own site-index and intent-directory via the dashboard. Contact sales for the schema documentation.</p>
+        </div>
+      </section>
+
+      <!-- ── FAQ ──────────────────────────────────────────── -->
+      <section>
+        <h2 id="faq" data-i18n="docs.s.faq">FAQ</h2>
+
+        <h3 data-i18n="docs.faq.1.q">Does MemorieAI store voice recordings?</h3>
+        <p data-i18n="docs.faq.1.a">No. Voice is processed in real time via Vapi's WebRTC pipeline. Transcripts are not stored by MemorieAI. Vapi's own data retention policy applies to the voice session; see their documentation for details.</p>
+
+        <h3 data-i18n="docs.faq.2.q">Does it work with SPAs (React, Vue, Angular)?</h3>
+        <p data-i18n="docs.faq.2.a">Yes. The semantic map is rebuilt after every URL change via the History API. Navigation tool calls use <code>window.location</code> and trigger a map rebuild on the <code>load</code> event of the new page. All click and fill events fire native DOM events that framework bindings respect.</p>
+
+        <h3 data-i18n="docs.faq.3.q">What is the performance impact of the embed?</h3>
+        <p data-i18n="docs.faq.3.a">The embed script is under 12 KB gzipped. It loads with <code>defer</code> and does not block rendering. The semantic map is built asynchronously on <code>load</code>. The Vapi WebRTC connection opens only when the user activates the bubble — there is no persistent connection on page load.</p>
+
+        <h3 data-i18n="docs.faq.4.q">Is it GDPR / CCPA compliant?</h3>
+        <p data-i18n="docs.faq.4.a">MemorieAI does not store personally identifiable information from user sessions. The only data collected is anonymous session telemetry (session count, tool usage counts) used for billing. Enterprise customers can request a Data Processing Agreement (DPA).</p>
+
+        <h3 data-i18n="docs.faq.5.q">Can I white-label the assistant?</h3>
+        <p data-i18n="docs.faq.5.a">Yes on Pro and Enterprise. Use <code>data-label</code> to set the display name, <code>data-color</code> for the brand color, and <code>data-assistant</code> to connect your own Vapi assistant with a fully custom voice and persona.</p>
+
+        <h3 data-i18n="docs.faq.6.q">What happens if the embed script fails to load?</h3>
+        <p data-i18n="docs.faq.6.a">Nothing. The embed is fully additive — it adds the MemorieAI bubble to the page but does not modify any existing elements. If the script fails, your site works exactly as before. There are no fallback dependencies.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="docs-footer">
+    <div class="docs-footer-inner">
+      <div>
+        <a class="nav-logo" href="landing-v2.html">MemorieAI</a>
+        <p data-i18n="docs.footer.p">The voice-powered digital adoption platform for any website.</p>
+      </div>
+      <div class="docs-footer-links">
+        <a href="landing-v2.html" data-i18n="docs.footer.home">Home</a>
+        <a href="landing-v2.html#pricing" data-i18n="docs.footer.pricing">Pricing</a>
+        <a href="mailto:josuedpinedad@gmail.com" data-i18n="docs.footer.support">Support</a>
+        <a href="mailto:josuedpinedad@gmail.com" data-i18n="docs.footer.privacy">Privacy</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      /* ── Translations ──────────────────────────────────────────── */
+      var T = {
+        en: {
+          'nav.how':'How It Works','nav.features':'Features','nav.pricing':'Pricing',
+          'nav.docs':'Docs','nav.cta':'Get Early Access',
+          'docs.toc':'On this page','docs.title':'Documentation',
+          'docs.h1':'Build with MemorieAI',
+          'docs.lead':'Everything you need to add a voice-powered guide to your website in under 5 minutes. No build tools. No framework lock-in. One script tag.',
+          'docs.group.start':'Getting Started','docs.group.config':'Configuration',
+          'docs.group.tools':'Tools Reference','docs.group.advanced':'Advanced',
+          'docs.group.ref':'Reference',
+          'docs.s.quickstart':'Quickstart','docs.s.install':'Installation',
+          'docs.s.verify':'Verify It Works','docs.s.how':'How It Works',
+          'docs.s.semantic':'Semantic Map','docs.s.pipeline':'Tool Pipeline',
+          'docs.s.config':'Configuration','docs.s.attrs':'Data Attributes',
+          'docs.s.prompt':'Custom Prompt','docs.s.promptex':'Prompt Template',
+          'docs.s.tools':'Browser Tools','docs.s.advanced':'Advanced',
+          'docs.s.multitenant':'Multi-Tenant','docs.s.domain':'Domain Locking',
+          'docs.s.langs':'Languages','docs.s.kb':'Knowledge Base',
+          'docs.s.faq':'FAQ','docs.s.support':'Support',
+          'docs.qs.p1':'Paste this script tag before <code>&lt;/body&gt;</code> on any page. That\'s the entire integration.',
+          'docs.qs.callout':'<strong>No API key yet?</strong> <a href="mailto:josuedpinedad@gmail.com">Request early access</a> and we\'ll set you up within 24 hours.',
+          'docs.qs.p2':'The MemorieAI bubble appears in the bottom-right corner. Your users click it, speak or type their request, and the assistant guides them through your site in real time.',
+          'docs.qs.verify.p':'Open your browser console after loading the page with the script. You should see:',
+          'docs.qs.verify.p2':'If you see a <code>403 domain_not_allowed</code> error, your domain has not been registered for your API key. See <a href="#domain-lock">Domain Locking</a>.',
+          'docs.how.p1':'MemorieAI operates as a thin layer on top of your existing website. It reads the live DOM, understands intent through voice or text, selects the right tool, and executes it. Nothing is pre-trained on your site.',
+          'docs.how.sem.p1':'On every page load, the embed script builds a <strong>semantic map</strong>: a structured index of visible interactive elements. This map is what the AI "sees" about your page.',
+          'docs.how.sem.p2':'Each element in the map includes: tag name, visible text, ARIA labels, role, viewport position (above / visible / below), and estimated area. The map is rebuilt automatically after any navigation.',
+          'docs.how.sem.tip':'Elements with descriptive ARIA labels, meaningful button text, and semantic HTML are indexed much more reliably than unlabeled icon buttons or generic "click here" links.',
+          'docs.how.pipe.p':'When a user speaks or types a request, this sequence runs:',
+          'docs.how.pipe.1':'<strong>Intent detection:</strong> The AI parses the user\'s request and maps it to one or more browser tools.',
+          'docs.how.pipe.2':'<strong>Selector resolution:</strong> The AI picks a target element from the semantic map using the best available descriptor (text, role, position).',
+          'docs.how.pipe.3':'<strong>Tool execution:</strong> The tool runs on the live page: navigate, highlight, click, fill, scroll, or read.',
+          'docs.how.pipe.4':'<strong>Map refresh:</strong> After any navigation, the semantic map is rebuilt for the new page before the next tool can run.',
+          'docs.how.pipe.5':'<strong>Voice feedback:</strong> The assistant speaks the result back to the user.',
+          'docs.cfg.p1':'All configuration is done through <code>data-*</code> attributes on the script tag. No separate config file, no dashboard required for basic setup.',
+          'docs.table.attr':'Attribute','docs.table.default':'Default','docs.table.desc':'Description',
+          'docs.attr.key':'Your MemorieAI API key. Required. Obtain from the dashboard after signing up.',
+          'docs.attr.lang':'Force a language: <code>en</code>, <code>es</code>. Defaults to browser locale detection.',
+          'docs.attr.pos':'Bubble position: <code>bottom-right</code> or <code>bottom-left</code>.',
+          'docs.attr.theme':'Color theme: <code>light</code>, <code>dark</code>, or <code>auto</code> (follows system preference).',
+          'docs.attr.color':'Primary accent color (hex). Applied to the bubble, highlights, and panel accents.',
+          'docs.attr.label':'Name shown in the panel header and in the assistant\'s speech.',
+          'docs.attr.assistant':'Pro / Enterprise. Your custom Vapi assistant ID, overriding the default MemorieAI assistant.',
+          'docs.cfg.prompt.p1':'Pro and Enterprise customers can write a custom system prompt per site from the dashboard. The prompt tells the assistant about your site\'s structure, key workflows, and personality. The live page map is injected automatically.',
+          'docs.cfg.prompt.tip':'Include <strong>exact URL paths</strong> for your most common workflows. The assistant will navigate directly to them when user intent matches, instead of relying on the page map alone.',
+          'docs.cfg.prompt.p2':'For the Miramar, FL deployment, the system prompt includes all 17 city departments, 40+ services, and their exact URLs — enabling the assistant to navigate directly without searching.',
+          'docs.tools.p1':'MemorieAI has six tools it can call on any page. Selectors are always drawn from the live semantic map — the AI never invents IDs or guesses URLs.',
+          'docs.tools.nav.p':'<strong>Parameters:</strong> <code>url</code> (string, required)',
+          'docs.tools.nav.desc':'Navigates the current tab to any URL — relative (<code>/pay-bills</code>) or absolute (<code>https://…</code>). After the page loads, the semantic map is automatically rebuilt before any subsequent tool can run.',
+          'docs.tools.hl.p':'<strong>Parameters:</strong> <code>selector</code> (string, required)',
+          'docs.tools.hl.desc':'Places a glowing animated border on the matched element so the user can see exactly where to look or click. The selector is a natural-language description resolved by a 5-stage fuzzy matching pipeline.',
+          'docs.tools.click.p':'<strong>Parameters:</strong> <code>selector</code> (string, required)',
+          'docs.tools.click.desc':'Programmatically clicks a button, link, tab, or any interactive element. Fires a native browser click event — works with React, Vue, Angular, and vanilla DOM listeners.',
+          'docs.tools.fill.p':'<strong>Parameters:</strong> <code>selector</code> (string), <code>text</code> (string, required)',
+          'docs.tools.fill.desc':'Types text into an input, textarea, or <code>contenteditable</code> element. Fires <code>input</code> and <code>change</code> events so framework bindings stay in sync.',
+          'docs.tools.scroll.p':'<strong>Parameters:</strong> <code>selector</code> (string, required)',
+          'docs.tools.scroll.desc':'Smooth-scrolls the page until the matched element is in the viewport. Respects <code>prefers-reduced-motion</code>.',
+          'docs.tools.read.p':'<strong>Parameters:</strong> <code>selector</code> (string, required)',
+          'docs.tools.read.desc':'Reads the text content of an element aloud to the user via the voice interface.',
+          'docs.adv.mt.p1':'Each customer gets a unique <code>data-key</code>. The key is validated server-side against the requesting origin on every session start.',
+          'docs.adv.mt.warn':'The Vapi API key and assistant ID are <strong>never exposed to the browser</strong>. They live only on the MemorieAI backend and are returned as short-lived session tokens scoped to the request origin.',
+          'docs.adv.dl.p1':'From your dashboard, register every origin your key is allowed to serve. Requests from unlisted origins are rejected with a <code>403 domain_not_allowed</code> error.',
+          'docs.adv.dl.p2':'<code>localhost</code>, <code>127.0.0.1</code>, and <code>localhost:*</code> are always allowed in development — no registration needed.',
+          'docs.adv.langs.p1':'MemorieAI detects the user\'s preferred language from their browser locale and from the language they speak or type.',
+          'docs.adv.langs.p2':'Force a specific language with <code>data-lang</code>:',
+          'docs.adv.langs.supported':'Currently well-tested languages:',
+          'docs.adv.langs.en':'English (en) — full support',
+          'docs.adv.langs.es':'Spanish (es) — full support; primary language for Miramar, FL deployment',
+          'docs.adv.langs.more':'Additional languages on request — <a href="mailto:josuedpinedad@gmail.com">contact us</a>',
+          'docs.adv.kb.p1':'For government and enterprise deployments, MemorieAI supports a structured knowledge base that maps user intents directly to pages and elements.',
+          'docs.adv.kb.p2':'Two JSON files power the Miramar deployment:',
+          'docs.adv.kb.siteindex':'Maps URLs to department names, sections, and available actions.',
+          'docs.adv.kb.intent':'Maps intent keywords to direct navigate + highlight actions. Bypasses the AI for the 40 most common city service requests.',
+          'docs.adv.kb.callout':'Enterprise customers can provide their own site-index and intent-directory via the dashboard. Contact sales for the schema documentation.',
+          'docs.faq.1.q':'Does MemorieAI store voice recordings?',
+          'docs.faq.1.a':'No. Voice is processed in real time via Vapi\'s WebRTC pipeline. Transcripts are not stored by MemorieAI.',
+          'docs.faq.2.q':'Does it work with SPAs (React, Vue, Angular)?',
+          'docs.faq.2.a':'Yes. The semantic map is rebuilt after every URL change via the History API. All click and fill events fire native DOM events that framework bindings respect.',
+          'docs.faq.3.q':'What is the performance impact of the embed?',
+          'docs.faq.3.a':'The embed script is under 12 KB gzipped. It loads with <code>defer</code> and does not block rendering. The Vapi WebRTC connection opens only when the user activates the bubble.',
+          'docs.faq.4.q':'Is it GDPR / CCPA compliant?',
+          'docs.faq.4.a':'MemorieAI does not store personally identifiable information from user sessions. Enterprise customers can request a Data Processing Agreement (DPA).',
+          'docs.faq.5.q':'Can I white-label the assistant?',
+          'docs.faq.5.a':'Yes on Pro and Enterprise. Use <code>data-label</code> to set the display name, <code>data-color</code> for the brand color, and <code>data-assistant</code> to connect your own Vapi assistant.',
+          'docs.faq.6.q':'What happens if the embed script fails to load?',
+          'docs.faq.6.a':'Nothing. The embed is fully additive — it adds the MemorieAI bubble but does not modify any existing elements. Your site works exactly as before.',
+          'docs.footer.p':'The voice-powered digital adoption platform for any website.',
+          'docs.footer.home':'Home','docs.footer.pricing':'Pricing',
+          'docs.footer.support':'Support','docs.footer.privacy':'Privacy'
+        },
+        es: {
+          'nav.how':'Cómo Funciona','nav.features':'Funciones','nav.pricing':'Precios',
+          'nav.docs':'Docs','nav.cta':'Acceso Anticipado',
+          'docs.toc':'En esta página','docs.title':'Documentación',
+          'docs.h1':'Construye con MemorieAI',
+          'docs.lead':'Todo lo que necesitas para añadir una guía de voz a tu sitio web en menos de 5 minutos. Sin herramientas de build. Sin dependencia de framework. Una etiqueta de script.',
+          'docs.group.start':'Primeros Pasos','docs.group.config':'Configuración',
+          'docs.group.tools':'Referencia de Herramientas','docs.group.advanced':'Avanzado',
+          'docs.group.ref':'Referencia',
+          'docs.s.quickstart':'Inicio Rápido','docs.s.install':'Instalación',
+          'docs.s.verify':'Verificar que Funciona','docs.s.how':'Cómo Funciona',
+          'docs.s.semantic':'Mapa Semántico','docs.s.pipeline':'Pipeline de Herramientas',
+          'docs.s.config':'Configuración','docs.s.attrs':'Atributos de Datos',
+          'docs.s.prompt':'Prompt Personalizado','docs.s.promptex':'Plantilla de Prompt',
+          'docs.s.tools':'Herramientas de Navegador','docs.s.advanced':'Avanzado',
+          'docs.s.multitenant':'Multi-Tenant','docs.s.domain':'Bloqueo de Dominio',
+          'docs.s.langs':'Idiomas','docs.s.kb':'Base de Conocimiento',
+          'docs.s.faq':'Preguntas Frecuentes','docs.s.support':'Soporte',
+          'docs.qs.p1':'Pega esta etiqueta de script antes de <code>&lt;/body&gt;</code> en cualquier página. Esa es la integración completa.',
+          'docs.qs.callout':'<strong>¿Aún no tienes clave API?</strong> <a href="mailto:josuedpinedad@gmail.com">Solicita acceso anticipado</a> y te configuramos en 24 horas.',
+          'docs.qs.p2':'La burbuja de MemorieAI aparece en la esquina inferior derecha. Los usuarios hacen clic, hablan o escriben su solicitud y el asistente los guía por tu sitio en tiempo real.',
+          'docs.qs.verify.p':'Abre la consola del navegador después de cargar la página con el script. Deberías ver:',
+          'docs.qs.verify.p2':'Si ves un error <code>403 domain_not_allowed</code>, tu dominio no está registrado para tu clave API. Ver <a href="#domain-lock">Bloqueo de Dominio</a>.',
+          'docs.how.p1':'MemorieAI opera como una capa delgada sobre tu sitio web existente. Lee el DOM en vivo, entiende la intención por voz o texto, selecciona la herramienta correcta y la ejecuta. Nada se preentreña en tu sitio.',
+          'docs.how.sem.p1':'En cada carga de página, el script construye un <strong>mapa semántico</strong>: un índice estructurado de los elementos interactivos visibles. Este mapa es lo que la IA "ve" sobre tu página.',
+          'docs.how.sem.p2':'Cada elemento del mapa incluye: nombre de etiqueta, texto visible, etiquetas ARIA, rol, posición en el viewport y área estimada. El mapa se reconstruye automáticamente tras cada navegación.',
+          'docs.how.sem.tip':'Los elementos con etiquetas ARIA descriptivas, texto de botón significativo y HTML semántico se indexan mucho más confiablemente que los botones de iconos sin etiqueta.',
+          'docs.how.pipe.p':'Cuando un usuario habla o escribe una solicitud, se ejecuta esta secuencia:',
+          'docs.how.pipe.1':'<strong>Detección de intención:</strong> La IA analiza la solicitud del usuario y la asigna a una o más herramientas del navegador.',
+          'docs.how.pipe.2':'<strong>Resolución de selector:</strong> La IA selecciona el elemento objetivo del mapa semántico usando el mejor descriptor disponible (texto, rol, posición).',
+          'docs.how.pipe.3':'<strong>Ejecución de herramienta:</strong> La herramienta se ejecuta en la página en vivo: navegar, resaltar, hacer clic, llenar, desplazar o leer.',
+          'docs.how.pipe.4':'<strong>Actualización del mapa:</strong> Tras cualquier navegación, el mapa semántico se reconstruye para la nueva página antes de que pueda ejecutarse la siguiente herramienta.',
+          'docs.how.pipe.5':'<strong>Retroalimentación de voz:</strong> El asistente comunica el resultado al usuario.',
+          'docs.cfg.p1':'Toda la configuración se realiza mediante atributos <code>data-*</code> en la etiqueta de script. Sin archivo de configuración separado, sin panel requerido para la configuración básica.',
+          'docs.table.attr':'Atributo','docs.table.default':'Valor por defecto','docs.table.desc':'Descripción',
+          'docs.attr.key':'Tu clave API de MemorieAI. Requerida. Obtenla desde el panel tras registrarte.',
+          'docs.attr.lang':'Forzar un idioma: <code>en</code>, <code>es</code>. Por defecto detecta el locale del navegador.',
+          'docs.attr.pos':'Posición de la burbuja: <code>bottom-right</code> o <code>bottom-left</code>.',
+          'docs.attr.theme':'Tema de color: <code>light</code>, <code>dark</code> o <code>auto</code> (sigue la preferencia del sistema).',
+          'docs.attr.color':'Color de acento principal (hex). Se aplica a la burbuja, resaltados y acentos del panel.',
+          'docs.attr.label':'Nombre mostrado en el encabezado del panel y en el habla del asistente.',
+          'docs.attr.assistant':'Pro / Enterprise. Tu ID de asistente Vapi personalizado, reemplazando al asistente predeterminado de MemorieAI.',
+          'docs.cfg.prompt.p1':'Los clientes Pro y Enterprise pueden escribir un prompt de sistema personalizado por sitio desde el panel. El prompt indica al asistente la estructura, flujos clave y personalidad de tu sitio.',
+          'docs.cfg.prompt.tip':'Incluye <strong>rutas de URL exactas</strong> para tus flujos de trabajo más comunes. El asistente navegará directamente a ellas cuando la intención del usuario coincida.',
+          'docs.cfg.prompt.p2':'Para el despliegue en Miramar, FL, el prompt incluye los 17 departamentos municipales, más de 40 servicios y sus URLs exactas.',
+          'docs.tools.p1':'MemorieAI tiene seis herramientas que puede usar en cualquier página. Los selectores siempre provienen del mapa semántico en vivo; la IA nunca inventa IDs ni adivina URLs.',
+          'docs.tools.nav.p':'<strong>Parámetros:</strong> <code>url</code> (cadena, requerido)',
+          'docs.tools.nav.desc':'Navega la pestaña actual a cualquier URL, relativa o absoluta. Tras la carga, el mapa semántico se reconstruye automáticamente antes de ejecutar cualquier herramienta posterior.',
+          'docs.tools.hl.p':'<strong>Parámetros:</strong> <code>selector</code> (cadena, requerido)',
+          'docs.tools.hl.desc':'Coloca un borde animado luminoso sobre el elemento seleccionado para que el usuario sepa exactamente dónde mirar o hacer clic.',
+          'docs.tools.click.p':'<strong>Parámetros:</strong> <code>selector</code> (cadena, requerido)',
+          'docs.tools.click.desc':'Hace clic programáticamente en un botón, enlace, pestaña o cualquier elemento interactivo. Dispara un evento clic nativo del navegador; compatible con React, Vue, Angular y DOM vanilla.',
+          'docs.tools.fill.p':'<strong>Parámetros:</strong> <code>selector</code> (cadena), <code>text</code> (cadena, requerido)',
+          'docs.tools.fill.desc':'Escribe texto en un input, textarea o elemento <code>contenteditable</code>. Dispara eventos <code>input</code> y <code>change</code> para mantener sincronizados los enlaces de framework.',
+          'docs.tools.scroll.p':'<strong>Parámetros:</strong> <code>selector</code> (cadena, requerido)',
+          'docs.tools.scroll.desc':'Desplaza suavemente la página hasta que el elemento esté en el viewport. Respeta <code>prefers-reduced-motion</code>.',
+          'docs.tools.read.p':'<strong>Parámetros:</strong> <code>selector</code> (cadena, requerido)',
+          'docs.tools.read.desc':'Lee en voz alta el contenido textual de un elemento al usuario mediante la interfaz de voz.',
+          'docs.adv.mt.p1':'Cada cliente recibe una <code>data-key</code> única. La clave se valida en el servidor contra el origen solicitante en cada inicio de sesión.',
+          'docs.adv.mt.warn':'La clave API de Vapi y el ID de asistente <strong>nunca se exponen al navegador</strong>. Solo existen en el backend de MemorieAI y se devuelven como tokens de sesión de corta duración.',
+          'docs.adv.dl.p1':'Desde tu panel, registra cada origen autorizado para tu clave. Las solicitudes de orígenes no registrados se rechazan con un error <code>403 domain_not_allowed</code>.',
+          'docs.adv.dl.p2':'<code>localhost</code>, <code>127.0.0.1</code> y <code>localhost:*</code> siempre están permitidos en desarrollo; no necesitan registro.',
+          'docs.adv.langs.p1':'MemorieAI detecta el idioma preferido del usuario por el locale del navegador y por el idioma en que habla o escribe.',
+          'docs.adv.langs.p2':'Fuerza un idioma específico con <code>data-lang</code>:',
+          'docs.adv.langs.supported':'Idiomas actualmente bien probados:',
+          'docs.adv.langs.en':'Inglés (en) — soporte completo',
+          'docs.adv.langs.es':'Español (es) — soporte completo; idioma principal del despliegue en Miramar, FL',
+          'docs.adv.langs.more':'Idiomas adicionales bajo solicitud — <a href="mailto:josuedpinedad@gmail.com">contáctanos</a>',
+          'docs.adv.kb.p1':'Para despliegues gubernamentales y empresariales, MemorieAI soporta una base de conocimiento estructurada que mapea intenciones de usuario directamente a páginas y elementos.',
+          'docs.adv.kb.p2':'Dos archivos JSON impulsan el despliegue de Miramar:',
+          'docs.adv.kb.siteindex':'Mapea URLs a nombres de departamentos, secciones y acciones disponibles.',
+          'docs.adv.kb.intent':'Mapea palabras clave de intención a acciones directas de navegación y resaltado, sin pasar por la IA, para las 40 solicitudes más comunes.',
+          'docs.adv.kb.callout':'Los clientes Enterprise pueden proporcionar su propio site-index e intent-directory desde el panel. Contacta a ventas para la documentación del esquema.',
+          'docs.faq.1.q':'¿MemorieAI guarda las grabaciones de voz?',
+          'docs.faq.1.a':'No. La voz se procesa en tiempo real mediante el pipeline WebRTC de Vapi. MemorieAI no almacena transcripciones.',
+          'docs.faq.2.q':'¿Funciona con SPAs (React, Vue, Angular)?',
+          'docs.faq.2.a':'Sí. El mapa semántico se reconstruye después de cada cambio de URL mediante la History API. Todos los eventos de clic y llenado disparan eventos DOM nativos que los frameworks respetan.',
+          'docs.faq.3.q':'¿Cuál es el impacto en el rendimiento?',
+          'docs.faq.3.a':'El script pesa menos de 12 KB comprimido. Se carga con <code>defer</code> y no bloquea el renderizado. La conexión WebRTC de Vapi solo se abre cuando el usuario activa la burbuja.',
+          'docs.faq.4.q':'¿Es compatible con RGPD / CCPA?',
+          'docs.faq.4.a':'MemorieAI no almacena información de identificación personal de las sesiones. Los clientes Enterprise pueden solicitar un Acuerdo de Procesamiento de Datos (DPA).',
+          'docs.faq.5.q':'¿Puedo usar mi propia marca en el asistente?',
+          'docs.faq.5.a':'Sí, en los planes Pro y Enterprise. Usa <code>data-label</code> para el nombre, <code>data-color</code> para el color de marca y <code>data-assistant</code> para conectar tu propio asistente Vapi.',
+          'docs.faq.6.q':'¿Qué pasa si el script falla al cargar?',
+          'docs.faq.6.a':'Nada. El embed es completamente aditivo: añade la burbuja pero no modifica ningún elemento existente. Tu sitio funciona exactamente igual que antes.',
+          'docs.footer.p':'La plataforma de adopción digital por voz para cualquier sitio web.',
+          'docs.footer.home':'Inicio','docs.footer.pricing':'Precios',
+          'docs.footer.support':'Soporte','docs.footer.privacy':'Privacidad'
+        }
+      };
+
+      /* ── Apply language ──────────────────────────────────────────── */
+      function applyLang(lang) {
+        if (!T[lang]) return;
+        document.documentElement.lang = lang;
+        try { localStorage.setItem('mai-lang', lang); } catch(e) {}
+        var dict = T[lang];
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+          var key = el.getAttribute('data-i18n');
+          if (dict[key] !== undefined) el.innerHTML = dict[key];
+        });
+        document.querySelectorAll('.lang-btn').forEach(function(btn) {
+          var active = btn.getAttribute('data-lang') === lang;
+          btn.classList.toggle('active', active);
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        var announcer = document.getElementById('lang-announcer');
+        if (announcer) {
+          announcer.textContent = lang === 'es' ? 'Idioma cambiado a español' : 'Language changed to English';
+        }
+        document.title = lang === 'es' ? 'Docs — MemorieAI' : 'Docs — MemorieAI';
+      }
+
+      document.querySelectorAll('.lang-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() { applyLang(btn.getAttribute('data-lang')); });
+      });
+
+      var saved; try { saved = localStorage.getItem('mai-lang'); } catch(e) {}
+      var detected = saved || (navigator.language && navigator.language.slice(0,2) === 'es' ? 'es' : 'en');
+      applyLang(detected);
+
+      /* ── Sidebar scroll spy ─────────────────────────────────────── */
+      if ('IntersectionObserver' in window) {
+        var allLinks = Array.from(document.querySelectorAll('.docs-sidebar a[href^="#"], .mobile-toc-links a[href^="#"]'));
+        var sections = allLinks
+          .map(function(a) { return document.querySelector(a.getAttribute('href')); })
+          .filter(Boolean);
+
+        var spy = new IntersectionObserver(function(entries) {
+          entries.forEach(function(e) {
+            if (e.isIntersecting) {
+              var id = e.target.id;
+              allLinks.forEach(function(a) {
+                var match = a.getAttribute('href') === '#' + id;
+                a.classList.toggle('active', match);
+              });
+            }
+          });
+        }, { rootMargin: '-15% 0px -75% 0px' });
+
+        sections.forEach(function(s) { spy.observe(s); });
+      }
+
+      /* ── Copy buttons ───────────────────────────────────────────── */
+      document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var text = btn.getAttribute('data-copy') || '';
+          var decoded = text.replace(/&#10;/g, '\n').replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(decoded).then(function() { showCopied(btn); }).catch(function() { fallbackCopy(decoded, btn); });
+          } else { fallbackCopy(decoded, btn); }
+        });
+      });
+
+      function showCopied(btn) {
+        btn.textContent = '✓ Copied';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      }
+
+      function fallbackCopy(text, btn) {
+        var el = document.createElement('textarea');
+        el.value = text; el.style.position = 'fixed'; el.style.opacity = '0';
+        document.body.appendChild(el); el.select();
+        try { document.execCommand('copy'); showCopied(btn); } catch(e) {}
+        document.body.removeChild(el);
+      }
+    }());
+  </script>
+
+</body>
+</html>
