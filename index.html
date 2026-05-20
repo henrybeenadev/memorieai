@@ -191,7 +191,59 @@
       font-size: clamp(2.25rem, 5vw, 3.75rem); font-weight: 700; letter-spacing: -0.125rem;
       line-height: 1.04; color: var(--white); margin-bottom: 28px;
     }
-    .hero p { font-size: 1.0625rem; color: rgba(255,255,255,.6); max-width: 480px; line-height: 1.8; margin-bottom: 40px; }
+    .hero p { font-size: 1.0625rem; color: rgba(255,255,255,.6); max-width: 480px; line-height: 1.8; margin-bottom: 28px; }
+
+    .hero-security-strip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.25);
+      padding: 8px 16px; border-radius: 100px; font-size: 12px; font-weight: 700;
+      color: rgba(255,255,255,.85); text-decoration: none; margin-bottom: 28px;
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .hero-security-strip:hover { background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.45); transform: translateY(-1px); }
+    .hss-icon { font-size: 13px; }
+    .hss-text { letter-spacing: .3px; }
+    .hss-arrow { font-weight: 700; opacity: .65; transition: transform .15s, opacity .15s; }
+    .hero-security-strip:hover .hss-arrow { transform: translateX(2px); opacity: 1; }
+
+    /* Security section */
+    .security-section {
+      padding: 120px 40px; background: var(--white); color: var(--gray-900);
+      border-top: 1px solid var(--gray-200);
+    }
+    .security-section .container { max-width: 1080px; margin: 0 auto; }
+    .security-section .section-label { color: var(--blue-dark); }
+    .security-section h2 {
+      font-size: clamp(1.875rem, 4vw, 2.875rem); font-weight: 700;
+      letter-spacing: -0.0625rem; line-height: 1.1; margin-bottom: 18px;
+    }
+    .security-section .sub {
+      font-size: 1.0625rem; color: var(--gray-500); max-width: 60ch; margin-bottom: 56px; line-height: 1.75;
+    }
+    .security-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px;
+    }
+    .security-card {
+      background: var(--white); border: 1px solid var(--gray-200); border-radius: 18px;
+      padding: 32px 28px; transition: border-color .15s, transform .15s, box-shadow .15s;
+    }
+    .security-card:hover { border-color: var(--blue-dark); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,68,136,.08); }
+    .sc-vector { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--blue-dark); margin-bottom: 12px; }
+    .sc-title { font-size: 1.125rem; font-weight: 700; margin-bottom: 12px; line-height: 1.35; }
+    .sc-desc { font-size: 0.9375rem; color: var(--gray-500); line-height: 1.65; }
+    .sc-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .sc-pill { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 10px; background: var(--gray-100); color: var(--gray-700); font-family: 'SF Mono', monospace; }
+    .security-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 24px; border-radius: 100px; background: var(--black); color: var(--white);
+      font-size: 14px; font-weight: 700; text-decoration: none;
+      transition: background .15s, transform .15s;
+    }
+    .security-cta:hover { background: #222; transform: translateY(-1px); }
+    @media (max-width: 900px) {
+      .security-section { padding: 80px 24px; }
+      .security-grid { grid-template-columns: 1fr; }
+    }
     .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
     .btn-primary {
       padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 700;
@@ -842,6 +894,7 @@
     <div class="nav-links">
       <a href="#how-it-works" data-i18n="nav.how">How It Works</a>
       <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="#security" data-i18n="nav.security">Security</a>
       <a href="#use-cases" data-i18n="nav.cases">Use Cases</a>
       <a href="#pricing" data-i18n="nav.pricing">Pricing</a>
       <a href="docs.html" data-i18n="nav.docs">Docs</a>
@@ -884,6 +937,11 @@
         <div class="hero-badge" data-i18n="hero.badge"><span class="badge-star">✦</span> Live on miramarfl.gov</div>
         <h1 data-i18n="hero.h1">Your website,<br><span class="grad-text">guided by voice.</span></h1>
         <p data-i18n="hero.p">Say what you need. MemorieAI finds it, shows you where to go, and takes you there — no menus, no searching, no confusion.</p>
+        <a class="hero-security-strip" href="#security">
+          <span class="hss-icon">🔒</span>
+          <span class="hss-text" data-i18n="hero.security">Domain-locked · JWT-scoped · DOM-sandboxed</span>
+          <span class="hss-arrow">→</span>
+        </a>
         <div class="hero-actions">
           <a class="btn-primary" href="#cta" data-i18n="hero.cta1">Start Free →</a>
           <a class="btn-ghost" href="#how-it-works" data-i18n="hero.cta2">See How It Works</a>
@@ -1005,7 +1063,59 @@
             <span class="feat-pill" data-i18n="feat.4.p3">Direct navigation</span>
           </div>
         </div>
+        <div class="feature-card dark">
+          <div class="feat-icon">🔒</div>
+          <div class="feat-title" data-i18n="feat.5.title">Security-first by design</div>
+          <div class="feat-desc" data-i18n="feat.5.desc">Three-layer defense: domain-locked sessions, JWT-scoped tokens, DOM-sandboxed navigation. Vapi private keys never touch the browser.</div>
+          <div class="feat-pills">
+            <span class="feat-pill" data-i18n="feat.5.p1">Domain-locked</span>
+            <span class="feat-pill" data-i18n="feat.5.p2">JWT-scoped</span>
+            <span class="feat-pill" data-i18n="feat.5.p3">DOM-sandboxed</span>
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ── Security Architecture ─────────────────────────────────────────────── -->
+  <section class="security-section" id="security">
+    <div class="container">
+      <div class="section-label" data-i18n="sec.label">Security Architecture</div>
+      <h2 data-i18n="sec.h2">Three layers of defense.<br><span class="grad-text">Zero keys in the browser.</span></h2>
+      <p class="sub" data-i18n="sec.sub">Every voice call is gated by an origin check, a scoped JWT, and a DOM sandbox. Each layer is independent; bypassing any single layer is insufficient to compromise the system.</p>
+      <div class="security-grid">
+        <div class="security-card">
+          <div class="sc-vector" data-i18n="sec.va.label">Vector A · Origin</div>
+          <div class="sc-title" data-i18n="sec.va.title">Domain-locked session validation</div>
+          <div class="sc-desc" data-i18n="sec.va.desc">Every <code>/v1/session</code> request is matched against the customer's allowed origins via strict-suffix hostname check. A key registered for <code>miramarfl.gov</code> cannot start a call from <code>miramarfl.gov.evil.com</code>.</div>
+          <div class="sc-pills">
+            <span class="sc-pill">Cloudflare Worker</span>
+            <span class="sc-pill">Origin header</span>
+            <span class="sc-pill">KV allowlist</span>
+          </div>
+        </div>
+        <div class="security-card">
+          <div class="sc-vector" data-i18n="sec.vb.label">Vector B · Navigation</div>
+          <div class="sc-title" data-i18n="sec.vb.title">DOM sandbox &amp; URL allowlist</div>
+          <div class="sc-desc" data-i18n="sec.vb.desc">Before any <code>navigate_to</code> or anchor click, <code>embed.js</code> validates the destination against the per-customer navigable_domains list. Cross-origin destinations require explicit allowlist entries.</div>
+          <div class="sc-pills">
+            <span class="sc-pill">urlAllowed()</span>
+            <span class="sc-pill">Anchor gate</span>
+            <span class="sc-pill">policy:&lt;key&gt;</span>
+          </div>
+        </div>
+        <div class="security-card">
+          <div class="sc-vector" data-i18n="sec.vc.label">Vector C · Authentication</div>
+          <div class="sc-title" data-i18n="sec.vc.title">JWT minting with scoped restrictions</div>
+          <div class="sc-desc" data-i18n="sec.vc.desc">The Worker mints HS256 JWTs scoped to one assistant per customer with a 15-minute TTL. The <code>tag: "public"</code> claim restricts the token to browser web calls — it cannot mutate assistants or touch admin APIs.</div>
+          <div class="sc-pills">
+            <span class="sc-pill">HS256</span>
+            <span class="sc-pill">15-min TTL</span>
+            <span class="sc-pill">allowedAssistantIds</span>
+          </div>
+        </div>
+      </div>
+      <a class="security-cta" href="docs.html#security" data-i18n="sec.cta">Read the full security spec →</a>
     </div>
   </section>
 
@@ -1296,7 +1406,24 @@
       var T = {
         en: {
           'skip':'Skip to content','nav.how':'How It Works','nav.features':'Features',
-          'nav.cases':'Use Cases','nav.pricing':'Pricing','nav.docs':'Docs',
+          'nav.cases':'Use Cases','nav.pricing':'Pricing','nav.docs':'Docs','nav.security':'Security',
+          'hero.security':'Domain-locked · JWT-scoped · DOM-sandboxed',
+          'feat.5.title':'Security-first by design',
+          'feat.5.desc':'Three-layer defense: domain-locked sessions, JWT-scoped tokens, DOM-sandboxed navigation. Vapi private keys never touch the browser.',
+          'feat.5.p1':'Domain-locked','feat.5.p2':'JWT-scoped','feat.5.p3':'DOM-sandboxed',
+          'sec.label':'Security Architecture',
+          'sec.h2':'Three layers of defense.<br><span class="grad-text">Zero keys in the browser.</span>',
+          'sec.sub':'Every voice call is gated by an origin check, a scoped JWT, and a DOM sandbox. Each layer is independent; bypassing any single layer is insufficient to compromise the system.',
+          'sec.va.label':'Vector A · Origin',
+          'sec.va.title':'Domain-locked session validation',
+          'sec.va.desc':'Every <code>/v1/session</code> request is matched against the customer\'s allowed origins via strict-suffix hostname check. A key registered for <code>miramarfl.gov</code> cannot start a call from <code>miramarfl.gov.evil.com</code>.',
+          'sec.vb.label':'Vector B · Navigation',
+          'sec.vb.title':'DOM sandbox &amp; URL allowlist',
+          'sec.vb.desc':'Before any <code>navigate_to</code> or anchor click, <code>embed.js</code> validates the destination against the per-customer navigable_domains list. Cross-origin destinations require explicit allowlist entries.',
+          'sec.vc.label':'Vector C · Authentication',
+          'sec.vc.title':'JWT minting with scoped restrictions',
+          'sec.vc.desc':'The Worker mints HS256 JWTs scoped to one assistant per customer with a 15-minute TTL. The <code>tag: "public"</code> claim restricts the token to browser web calls — it cannot mutate assistants or touch admin APIs.',
+          'sec.cta':'Read the full security spec →',
           'nav.cta':'Get Early Access',
           'hero.badge':'<span class="badge-star">✦</span> Live on miramarfl.gov',
           'hero.h1':'Your website,<br><span class="grad-text">guided by voice.</span>',
@@ -1406,7 +1533,24 @@
         },
         es: {
           'skip':'Ir al contenido','nav.how':'Cómo Funciona','nav.features':'Funciones',
-          'nav.cases':'Casos de Uso','nav.pricing':'Precios','nav.docs':'Docs',
+          'nav.cases':'Casos de Uso','nav.pricing':'Precios','nav.docs':'Docs','nav.security':'Seguridad',
+          'hero.security':'Bloqueado por dominio · JWT restringido · DOM sandboxed',
+          'feat.5.title':'Seguridad desde el diseño',
+          'feat.5.desc':'Defensa de tres capas: sesiones bloqueadas por dominio, tokens JWT restringidos, navegación con DOM sandboxed. Las llaves privadas de Vapi nunca tocan el navegador.',
+          'feat.5.p1':'Domain-locked','feat.5.p2':'JWT restringido','feat.5.p3':'DOM sandboxed',
+          'sec.label':'Arquitectura de Seguridad',
+          'sec.h2':'Tres capas de defensa.<br><span class="grad-text">Cero llaves en el navegador.</span>',
+          'sec.sub':'Cada llamada de voz pasa por una verificación de origen, un JWT restringido, y un sandbox de DOM. Cada capa es independiente; saltarse una sola capa es insuficiente para comprometer el sistema.',
+          'sec.va.label':'Vector A · Origen',
+          'sec.va.title':'Validación de sesión bloqueada por dominio',
+          'sec.va.desc':'Cada petición a <code>/v1/session</code> se compara contra los orígenes permitidos del cliente via strict-suffix de hostname. Una llave registrada para <code>miramarfl.gov</code> no puede iniciar una llamada desde <code>miramarfl.gov.evil.com</code>.',
+          'sec.vb.label':'Vector B · Navegación',
+          'sec.vb.title':'Sandbox de DOM y allowlist de URLs',
+          'sec.vb.desc':'Antes de cualquier <code>navigate_to</code> o clic en anchor, <code>embed.js</code> valida el destino contra la lista navigable_domains por cliente. Los destinos cross-origin requieren entradas explícitas en la allowlist.',
+          'sec.vc.label':'Vector C · Autenticación',
+          'sec.vc.title':'Emisión de JWT con restricciones',
+          'sec.vc.desc':'El Worker firma JWTs HS256 restringidos a un assistant por cliente con TTL de 15 minutos. El claim <code>tag: "public"</code> limita el token a llamadas web del navegador — no puede mutar assistants ni tocar APIs de admin.',
+          'sec.cta':'Lee la especificación completa de seguridad →',
           'nav.cta':'Acceso Anticipado',
           'hero.badge':'<span class="badge-star">✦</span> En vivo en miramarfl.gov',
           'hero.h1':'Tu sitio web,<br><span class="grad-text">guiado por voz.</span>',
