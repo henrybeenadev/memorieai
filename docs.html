@@ -347,6 +347,7 @@
       <a href="#how-it-works" data-i18n="docs.s.how">How It Works</a>
       <a href="#configuration" data-i18n="docs.s.config">Configuration</a>
       <a href="#tools" data-i18n="docs.s.tools">Tools</a>
+      <a href="#security" data-i18n="docs.s.security">Security</a>
       <a href="#advanced" data-i18n="docs.s.advanced">Advanced</a>
       <a href="#faq" data-i18n="docs.s.faq">FAQ</a>
     </div>
@@ -381,6 +382,15 @@
         <a class="sidebar-sub" href="#fill">fill_field</a>
         <a class="sidebar-sub" href="#scroll">scroll_to</a>
         <a class="sidebar-sub" href="#read">read_content</a>
+      </div>
+      <div class="sidebar-group">
+        <div class="sidebar-group-title" data-i18n="docs.group.security">Security</div>
+        <a class="sidebar-link" href="#security" data-i18n="docs.s.security">Architecture</a>
+        <a class="sidebar-sub" href="#vector-a" data-i18n="docs.s.va">Vector A — Domain Lock</a>
+        <a class="sidebar-sub" href="#vector-b" data-i18n="docs.s.vb">Vector B — URL Sandbox</a>
+        <a class="sidebar-sub" href="#vector-c" data-i18n="docs.s.vc">Vector C — JWT Mint</a>
+        <a class="sidebar-sub" href="#destructive-click" data-i18n="docs.s.vd">Destructive Click Layer</a>
+        <a class="sidebar-sub" href="#rotation" data-i18n="docs.s.rotation">Secret Rotation</a>
       </div>
       <div class="sidebar-group">
         <div class="sidebar-group-title" data-i18n="docs.group.advanced">Advanced</div>
@@ -610,6 +620,160 @@
         </div>
       </section>
 
+      <!-- ── Security Architecture ─────────────────────────── -->
+      <section>
+        <h2 id="security" data-i18n="docs.s.security">Security Architecture</h2>
+        <p data-i18n="docs.sec.lead">MemorieAI runs on a <strong>Security Gateway</strong> pattern. The customer's webpage never holds a Vapi private key. Instead, the embed exchanges a public customer key for a short-lived, origin-locked, assistant-scoped JWT through a Cloudflare Worker. Three independent defense vectors guard every voice call.</p>
+
+        <div class="code-wrap">
+          <span class="code-lang">ARCHITECTURE</span>
+          <div class="code-block">┌──────────────┐       ┌──────────────────────┐       ┌─────────────┐
+│   Browser    │  ──▶  │  Cloudflare Worker   │  ──▶  │    Vapi     │
+│   embed.js   │       │  (Security Gateway)  │       │  /call/web  │
+│   data-key   │  ◀──  │  /v1/session         │       └─────────────┘
+└──────────────┘ JWT   └──────────────────────┘
+                              │
+                              ▼
+                       ┌──────────────┐
+                       │ KV + Secrets │
+                       │ auth:&lt;key&gt;   │
+                       │ policy:&lt;key&gt; │
+                       │ VAPI_*       │
+                       └──────────────┘</div>
+        </div>
+
+        <div class="callout info">
+          <span class="callout-icon">ℹ️</span>
+          <p data-i18n="docs.sec.bound"><strong>Trust boundaries:</strong> the customer page is untrusted; the Cloudflare Worker is the only trusted runtime that ever sees the Vapi private key. The JWT delivered to the browser is short-lived (15 minutes) and scoped to one assistant via a <code>restrictions.allowedAssistantIds</code> claim.</p>
+        </div>
+
+        <h3 id="vector-a" data-i18n="docs.s.va">Vector A — Domain-Locked Session Validation</h3>
+        <p data-i18n="docs.sec.va.p1"><strong>Threat:</strong> an attacker copies a customer's <code>&lt;script data-key="…"&gt;</code> onto an unauthorized domain to abuse the customer's Vapi billing.</p>
+        <p data-i18n="docs.sec.va.p2"><strong>Layer:</strong> Origin / CORS</p>
+        <p data-i18n="docs.sec.va.p3">On every <code>POST /v1/session</code>, the Worker reads the browser-set <code>Origin</code> header and matches the hostname against the <code>domains</code> array of the customer's <code>auth:&lt;key&gt;</code> KV record. Matching is <strong>strict-suffix, case-insensitive</strong>:</p>
+        <div class="code-wrap">
+          <span class="code-lang">JS · worker/src/validate.js</span>
+          <div class="code-block"><span class="kw">function</span> originAllowed(host, domains) {
+  <span class="kw">if</span> (!host || !<span class="attr">Array</span>.isArray(domains)) <span class="kw">return</span> <span class="num">false</span>;
+  <span class="kw">const</span> h = host.toLowerCase();
+  <span class="kw">return</span> domains.some(d =&gt; {
+    <span class="kw">if</span> (<span class="kw">typeof</span> d !== <span class="str">'string'</span>) <span class="kw">return</span> <span class="num">false</span>;
+    <span class="kw">const</span> dl = d.toLowerCase();
+    <span class="kw">return</span> h === dl || h.endsWith(<span class="str">'.'</span> + dl);
+  });
+}</div>
+        </div>
+        <p data-i18n="docs.sec.va.p4">A <code>domains</code> entry of <code>miramarfl.gov</code> authorizes <code>https://miramarfl.gov</code> and <code>https://www.miramarfl.gov</code>, but <strong>rejects</strong> <code>https://miramarfl.gov.evil.com</code> — the dot prefix in the suffix check defeats sibling-prefix attacks.</p>
+        <p data-i18n="docs.sec.va.p5"><strong>Failure mode:</strong> the Worker returns <code>403 Forbidden</code> with an opaque body <code>{ "error": "forbidden" }</code> and <strong>no</strong> <code>Access-Control-Allow-Origin</code> header. The browser surfaces a CORS error; <code>embed.js</code> silently refuses to render the bubble. No signal as to whether the key exists, the domain is wrong, or the trial expired.</p>
+
+        <h3 id="vector-b" data-i18n="docs.s.vb">Vector B — DOM Sandbox &amp; URL Allowlist</h3>
+        <p data-i18n="docs.sec.vb.p1"><strong>Threat:</strong> the AI — through hallucination or DOM-based prompt injection — emits a <code>navigate_to(https://phishing.example.com)</code> tool call that exfiltrates the user to a malicious destination.</p>
+        <p data-i18n="docs.sec.vb.p2"><strong>Layer:</strong> Navigation / tool execution</p>
+        <p data-i18n="docs.sec.vb.p3"><code>embed.js</code> enforces a client-side URL sandbox <strong>before</strong> any navigation or anchor click. The allowlist arrives in the initial <code>/v1/session</code> response and is cached in the closure — zero extra network round-trips during a voice call.</p>
+        <div class="code-wrap">
+          <span class="code-lang">JS · embed.js</span>
+          <div class="code-block"><span class="kw">function</span> urlAllowed(href) {
+  <span class="kw">if</span> (<span class="kw">typeof</span> href !== <span class="str">'string'</span> || href.length === <span class="num">0</span>) <span class="kw">return</span> <span class="num">false</span>;
+  <span class="kw">if</span> (href.charAt(<span class="num">0</span>) === <span class="str">'#'</span>) <span class="kw">return</span> <span class="num">true</span>;            <span class="comment">// fragment → allow</span>
+  <span class="kw">let</span> target;
+  <span class="kw">try</span> { target = <span class="kw">new</span> <span class="attr">URL</span>(href, location.href); }
+  <span class="kw">catch</span> { <span class="kw">return</span> <span class="num">false</span>; }
+  <span class="kw">if</span> (target.origin === location.origin) <span class="kw">return</span> <span class="num">true</span>;    <span class="comment">// same-origin → allow</span>
+  <span class="kw">const</span> host = target.hostname.toLowerCase();
+  <span class="kw">const</span> list = _session.navigableDomains || [];
+  <span class="kw">return</span> list.some(d =&gt; host === d || host.endsWith(<span class="str">'.'</span> + d));
+}</div>
+        </div>
+        <p data-i18n="docs.sec.vb.p4">The sandbox guards two surfaces:</p>
+        <ol>
+          <li data-i18n="docs.sec.vb.l1"><strong><code>navigate_to(url)</code></strong> — the explicit tool call</li>
+          <li data-i18n="docs.sec.vb.l2"><strong><code>click_element(selector)</code></strong> — when the resolved DOM node is an <code>&lt;a href&gt;</code> or descendant. The gate is scoped to HTTP(S) protocols; <code>mailto:</code>, <code>tel:</code>, <code>javascript:</code>, and empty hrefs pass through (they don't navigate to a remote origin).</li>
+        </ol>
+        <div class="callout tip">
+          <span class="callout-icon">💡</span>
+          <p data-i18n="docs.sec.vb.tip"><strong>Cross-origin destinations</strong> must be explicit. Add entries to <code>policy:&lt;key&gt;.external_domains</code> for vendor portals, job boards, or any external destination the agent is allowed to navigate to. Same-origin and fragment-only URLs are always allowed regardless of the list.</p>
+        </div>
+
+        <h3 id="vector-c" data-i18n="docs.s.vc">Vector C — JWT Minting with Scoped Restrictions</h3>
+        <p data-i18n="docs.sec.vc.p1"><strong>Threat:</strong> even if a browser-resident token leaks via DevTools scraping or a malicious extension, its blast radius must be bounded — single assistant, single org, short TTL.</p>
+        <p data-i18n="docs.sec.vc.p2"><strong>Layer:</strong> Authentication / authorization</p>
+        <p data-i18n="docs.sec.vc.p3">The Worker mints HS256 JWTs using the Web Crypto API. No third-party library; signing happens at the edge using <code>crypto.subtle.sign('HMAC', …)</code> with <code>VAPI_PRIVATE_KEY</code> as the secret.</p>
+        <div class="code-wrap">
+          <span class="code-lang">JS · worker/src/jwt.js</span>
+          <div class="code-block"><span class="kw">const</span> payload = {
+  orgId,
+  token: {
+    tag: <span class="str">'public'</span>,                                    <span class="comment">// browser-initiated /call/web</span>
+    restrictions: { allowedAssistantIds: [assistantId] }
+  },
+  iat: nowSec,
+  exp: nowSec + ttlSec                                <span class="comment">// 900s = 15 minutes</span>
+};</div>
+        </div>
+        <p data-i18n="docs.sec.vc.p4">Three design choices reduce blast radius on a leaked token:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th data-i18n="docs.sec.vc.t1">Choice</th><th data-i18n="docs.sec.vc.t2">Effect on a leaked token</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>tag: "public"</td>
+                <td class="td-desc" data-i18n="docs.sec.vc.r1">Can only initiate browser web calls. Cannot mutate assistants, export call history, or touch the REST admin surface. The <code>"private"</code> tag is reserved for server-side admin and is <strong>never</strong> minted by this Worker.</td>
+              </tr>
+              <tr>
+                <td>allowedAssistantIds</td>
+                <td class="td-desc" data-i18n="docs.sec.vc.r2">Token can start a call ONLY for the one assistant tied to this customer. Cannot be pivoted to a different, more expensive assistant on the same org.</td>
+              </tr>
+              <tr>
+                <td>exp = iat + 900</td>
+                <td class="td-desc" data-i18n="docs.sec.vc.r3">Token expires 15 minutes after issuance. In-progress calls survive expiry, but no new call can start with a stale token.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <p data-i18n="docs.sec.vc.warn">The Vapi private key never leaves the Worker. It is read from <code>env.VAPI_PRIVATE_KEY</code> at request time, used to derive an HMAC-SHA-256 signing key, and discarded after the signature is computed. Never logged, never serialized into responses, never exposed to the client.</p>
+        </div>
+
+        <h3 id="destructive-click" data-i18n="docs.s.vd">Destructive Click Layer</h3>
+        <p data-i18n="docs.sec.vd.p1">A complement to Vector B at the click level. When <code>click_element</code> is invoked on a node whose text contains a destructive keyword (<code>delete</code>, <code>remove</code>, <code>cancel</code>, <code>reset</code>, <code>clear</code>, <code>sign out</code>, <code>log out</code>, <code>logout</code>, <code>unsubscribe</code>, <code>deactivate</code>), <code>embed.js</code> pauses execution and renders a confirm overlay inside the widget panel.</p>
+        <div class="code-wrap">
+          <span class="code-lang">JS · embed.js</span>
+          <div class="code-block"><span class="kw">if</span> (isDestructiveTarget(r.element)) {
+  <span class="kw">const</span> approved = <span class="kw">await</span> requestConfirm(r.element);
+  <span class="kw">if</span> (!approved) {
+    <span class="kw">return</span> {
+      success: <span class="num">false</span>,
+      error: <span class="str">'user_cancelled_destructive'</span>,
+      requested: <span class="str">'click_element'</span>
+    };
+  }
+}</div>
+        </div>
+        <p data-i18n="docs.sec.vd.p2">Two per-customer overrides via the sibling <code>policy:&lt;key&gt;</code> record:</p>
+        <ul>
+          <li data-i18n="docs.sec.vd.l1"><code>destructive_keyword_extras</code> — add words. A bank might add <code>transfer</code>; a CRM might add <code>archive</code>.</li>
+          <li data-i18n="docs.sec.vd.l2"><code>destructive_keyword_excludes</code> — remove words. A reservation site that legitimately uses "Cancel" on every page can excise it to avoid friction.</li>
+        </ul>
+        <p data-i18n="docs.sec.vd.p3">The confirm UI lives entirely inside the widget — no <code>window.confirm()</code>, no overlay on the host page. The panel swaps into a confirm state via a <code>.confirming</code> class, showing a red <code>Confirmar</code> and grey <code>Cancelar</code> button. Cancellation returns <code>user_cancelled_destructive</code> to the LLM, which continues the conversation naturally.</p>
+
+        <h3 id="rotation" data-i18n="docs.s.rotation">Secret Rotation Protocol</h3>
+        <p data-i18n="docs.sec.rot.p1">GitGuardian and equivalent secret scanners will alert on any Vapi key value committed to the repository, even transiently in older git history. The official rotation procedure:</p>
+        <ol class="flow-steps">
+          <li><p data-i18n="docs.sec.rot.s1"><strong>Within 5 minutes of the alert:</strong> open the Vapi dashboard, locate the leaked key, click <strong>Regenerate</strong>. The leaked value is invalidated at the Vapi account level immediately — calls signed with the old key cease working globally.</p></li>
+          <li><p data-i18n="docs.sec.rot.s2"><strong>Update the Worker secret:</strong> from <code>worker/</code>, run <code>wrangler secret put VAPI_PRIVATE_KEY</code> and paste the new value into the prompt. Workers hot-reload secrets — no redeploy required.</p></li>
+          <li><p data-i18n="docs.sec.rot.s3"><strong>Update any non-Worker surface</strong> that still hardcodes a key. Commit with a <code>security:</code> prefix.</p></li>
+          <li><p data-i18n="docs.sec.rot.s4"><strong>Resolve the alert as "Secret rotated"</strong> in GitGuardian. Document the response. Do NOT mark as "False positive" — rotation is the correct remediation.</p></li>
+          <li><p data-i18n="docs.sec.rot.s5"><strong>Do not rewrite git history.</strong> Once the secret is rotated at the source-of-truth, the leaked value is inert. History rewrite is destructive, breaks every existing clone, and is rarely worth the operational cost.</p></li>
+        </ol>
+        <div class="callout warn">
+          <span class="callout-icon">⚠️</span>
+          <p data-i18n="docs.sec.rot.warn"><strong>Never-Hardcode Policy:</strong> Vapi private keys, org IDs, customer auth records, and per-call JWTs must NEVER appear as string literals in browser-shipping JavaScript. They live exclusively as Cloudflare Worker secrets and KV records.</p>
+        </div>
+      </section>
+
       <!-- ── Advanced ──────────────────────────────────────── -->
       <section>
         <h2 id="advanced" data-i18n="docs.s.advanced">Advanced</h2>
@@ -722,7 +886,48 @@ https://staging.miramarfl.gov
           'docs.lead':'Everything you need to add a voice-powered guide to your website in under 5 minutes. No build tools. No framework lock-in. One script tag.',
           'docs.group.start':'Getting Started','docs.group.config':'Configuration',
           'docs.group.tools':'Tools Reference','docs.group.advanced':'Advanced',
-          'docs.group.ref':'Reference',
+          'docs.group.security':'Security','docs.group.ref':'Reference',
+          'docs.s.security':'Architecture',
+          'docs.s.va':'Vector A — Domain Lock',
+          'docs.s.vb':'Vector B — URL Sandbox',
+          'docs.s.vc':'Vector C — JWT Mint',
+          'docs.s.vd':'Destructive Click Layer',
+          'docs.s.rotation':'Secret Rotation',
+          'docs.sec.lead':'MemorieAI runs on a <strong>Security Gateway</strong> pattern. The customer\'s webpage never holds a Vapi private key. Instead, the embed exchanges a public customer key for a short-lived, origin-locked, assistant-scoped JWT through a Cloudflare Worker. Three independent defense vectors guard every voice call.',
+          'docs.sec.bound':'<strong>Trust boundaries:</strong> the customer page is untrusted; the Cloudflare Worker is the only trusted runtime that ever sees the Vapi private key. The JWT delivered to the browser is short-lived (15 minutes) and scoped to one assistant via a <code>restrictions.allowedAssistantIds</code> claim.',
+          'docs.sec.va.p1':'<strong>Threat:</strong> an attacker copies a customer\'s <code>&lt;script data-key="…"&gt;</code> onto an unauthorized domain to abuse the customer\'s Vapi billing.',
+          'docs.sec.va.p2':'<strong>Layer:</strong> Origin / CORS',
+          'docs.sec.va.p3':'On every <code>POST /v1/session</code>, the Worker reads the browser-set <code>Origin</code> header and matches the hostname against the <code>domains</code> array of the customer\'s <code>auth:&lt;key&gt;</code> KV record. Matching is <strong>strict-suffix, case-insensitive</strong>:',
+          'docs.sec.va.p4':'A <code>domains</code> entry of <code>miramarfl.gov</code> authorizes <code>https://miramarfl.gov</code> and <code>https://www.miramarfl.gov</code>, but <strong>rejects</strong> <code>https://miramarfl.gov.evil.com</code> — the dot prefix in the suffix check defeats sibling-prefix attacks.',
+          'docs.sec.va.p5':'<strong>Failure mode:</strong> the Worker returns <code>403 Forbidden</code> with an opaque body <code>{ "error": "forbidden" }</code> and <strong>no</strong> <code>Access-Control-Allow-Origin</code> header. The browser surfaces a CORS error; <code>embed.js</code> silently refuses to render the bubble. No signal as to whether the key exists, the domain is wrong, or the trial expired.',
+          'docs.sec.vb.p1':'<strong>Threat:</strong> the AI — through hallucination or DOM-based prompt injection — emits a <code>navigate_to(https://phishing.example.com)</code> tool call that exfiltrates the user to a malicious destination.',
+          'docs.sec.vb.p2':'<strong>Layer:</strong> Navigation / tool execution',
+          'docs.sec.vb.p3':'<code>embed.js</code> enforces a client-side URL sandbox <strong>before</strong> any navigation or anchor click. The allowlist arrives in the initial <code>/v1/session</code> response and is cached in the closure — zero extra network round-trips during a voice call.',
+          'docs.sec.vb.p4':'The sandbox guards two surfaces:',
+          'docs.sec.vb.l1':'<strong><code>navigate_to(url)</code></strong> — the explicit tool call',
+          'docs.sec.vb.l2':'<strong><code>click_element(selector)</code></strong> — when the resolved DOM node is an <code>&lt;a href&gt;</code> or descendant. The gate is scoped to HTTP(S) protocols; <code>mailto:</code>, <code>tel:</code>, <code>javascript:</code>, and empty hrefs pass through.',
+          'docs.sec.vb.tip':'<strong>Cross-origin destinations</strong> must be explicit. Add entries to <code>policy:&lt;key&gt;.external_domains</code> for vendor portals, job boards, or any external destination the agent is allowed to navigate to. Same-origin and fragment-only URLs are always allowed regardless of the list.',
+          'docs.sec.vc.p1':'<strong>Threat:</strong> even if a browser-resident token leaks via DevTools scraping or a malicious extension, its blast radius must be bounded — single assistant, single org, short TTL.',
+          'docs.sec.vc.p2':'<strong>Layer:</strong> Authentication / authorization',
+          'docs.sec.vc.p3':'The Worker mints HS256 JWTs using the Web Crypto API. No third-party library; signing happens at the edge using <code>crypto.subtle.sign(\'HMAC\', …)</code> with <code>VAPI_PRIVATE_KEY</code> as the secret.',
+          'docs.sec.vc.p4':'Three design choices reduce blast radius on a leaked token:',
+          'docs.sec.vc.t1':'Choice','docs.sec.vc.t2':'Effect on a leaked token',
+          'docs.sec.vc.r1':'Can only initiate browser web calls. Cannot mutate assistants, export call history, or touch the REST admin surface. The <code>"private"</code> tag is reserved for server-side admin and is <strong>never</strong> minted by this Worker.',
+          'docs.sec.vc.r2':'Token can start a call ONLY for the one assistant tied to this customer. Cannot be pivoted to a different, more expensive assistant on the same org.',
+          'docs.sec.vc.r3':'Token expires 15 minutes after issuance. In-progress calls survive expiry, but no new call can start with a stale token.',
+          'docs.sec.vc.warn':'The Vapi private key never leaves the Worker. It is read from <code>env.VAPI_PRIVATE_KEY</code> at request time, used to derive an HMAC-SHA-256 signing key, and discarded after the signature is computed. Never logged, never serialized into responses, never exposed to the client.',
+          'docs.sec.vd.p1':'A complement to Vector B at the click level. When <code>click_element</code> is invoked on a node whose text contains a destructive keyword (<code>delete</code>, <code>remove</code>, <code>cancel</code>, <code>reset</code>, <code>clear</code>, <code>sign out</code>, <code>log out</code>, <code>logout</code>, <code>unsubscribe</code>, <code>deactivate</code>), <code>embed.js</code> pauses execution and renders a confirm overlay inside the widget panel.',
+          'docs.sec.vd.p2':'Two per-customer overrides via the sibling <code>policy:&lt;key&gt;</code> record:',
+          'docs.sec.vd.l1':'<code>destructive_keyword_extras</code> — add words. A bank might add <code>transfer</code>; a CRM might add <code>archive</code>.',
+          'docs.sec.vd.l2':'<code>destructive_keyword_excludes</code> — remove words. A reservation site that legitimately uses "Cancel" on every page can excise it to avoid friction.',
+          'docs.sec.vd.p3':'The confirm UI lives entirely inside the widget — no <code>window.confirm()</code>, no overlay on the host page. The panel swaps into a confirm state via a <code>.confirming</code> class, showing a red <code>Confirmar</code> and grey <code>Cancelar</code> button. Cancellation returns <code>user_cancelled_destructive</code> to the LLM, which continues the conversation naturally.',
+          'docs.sec.rot.p1':'GitGuardian and equivalent secret scanners will alert on any Vapi key value committed to the repository, even transiently in older git history. The official rotation procedure:',
+          'docs.sec.rot.s1':'<strong>Within 5 minutes of the alert:</strong> open the Vapi dashboard, locate the leaked key, click <strong>Regenerate</strong>. The leaked value is invalidated at the Vapi account level immediately — calls signed with the old key cease working globally.',
+          'docs.sec.rot.s2':'<strong>Update the Worker secret:</strong> from <code>worker/</code>, run <code>wrangler secret put VAPI_PRIVATE_KEY</code> and paste the new value into the prompt. Workers hot-reload secrets — no redeploy required.',
+          'docs.sec.rot.s3':'<strong>Update any non-Worker surface</strong> that still hardcodes a key. Commit with a <code>security:</code> prefix.',
+          'docs.sec.rot.s4':'<strong>Resolve the alert as "Secret rotated"</strong> in GitGuardian. Document the response. Do NOT mark as "False positive" — rotation is the correct remediation.',
+          'docs.sec.rot.s5':'<strong>Do not rewrite git history.</strong> Once the secret is rotated at the source-of-truth, the leaked value is inert. History rewrite is destructive, breaks every existing clone, and is rarely worth the operational cost.',
+          'docs.sec.rot.warn':'<strong>Never-Hardcode Policy:</strong> Vapi private keys, org IDs, customer auth records, and per-call JWTs must NEVER appear as string literals in browser-shipping JavaScript. They live exclusively as Cloudflare Worker secrets and KV records.',
           'docs.s.quickstart':'Quickstart','docs.s.install':'Installation',
           'docs.s.verify':'Verify It Works','docs.s.how':'How It Works',
           'docs.s.semantic':'Semantic Map','docs.s.pipeline':'Tool Pipeline',
@@ -811,7 +1016,48 @@ https://staging.miramarfl.gov
           'docs.lead':'Todo lo que necesitas para añadir una guía de voz a tu sitio web en menos de 5 minutos. Sin herramientas de build. Sin dependencia de framework. Una etiqueta de script.',
           'docs.group.start':'Primeros Pasos','docs.group.config':'Configuración',
           'docs.group.tools':'Referencia de Herramientas','docs.group.advanced':'Avanzado',
-          'docs.group.ref':'Referencia',
+          'docs.group.security':'Seguridad','docs.group.ref':'Referencia',
+          'docs.s.security':'Arquitectura',
+          'docs.s.va':'Vector A — Bloqueo de Dominio',
+          'docs.s.vb':'Vector B — Sandbox de URL',
+          'docs.s.vc':'Vector C — Emisión de JWT',
+          'docs.s.vd':'Capa de Clic Destructivo',
+          'docs.s.rotation':'Rotación de Secretos',
+          'docs.sec.lead':'MemorieAI opera bajo un patrón <strong>Security Gateway</strong>. La página del cliente nunca guarda una llave privada de Vapi. En su lugar, el embed intercambia una llave pública de cliente por un JWT de corta duración, bloqueado por origen y restringido a un assistant, mediante un Cloudflare Worker. Tres vectores de defensa independientes protegen cada llamada de voz.',
+          'docs.sec.bound':'<strong>Fronteras de confianza:</strong> la página del cliente es no confiable; el Cloudflare Worker es el único runtime confiable que ve la llave privada de Vapi. El JWT entregado al navegador es de corta duración (15 min) y está restringido a un assistant via el claim <code>restrictions.allowedAssistantIds</code>.',
+          'docs.sec.va.p1':'<strong>Amenaza:</strong> un atacante copia el <code>&lt;script data-key="…"&gt;</code> del cliente a un dominio no autorizado para abusar del presupuesto Vapi del cliente.',
+          'docs.sec.va.p2':'<strong>Capa:</strong> Origen / CORS',
+          'docs.sec.va.p3':'En cada <code>POST /v1/session</code>, el Worker lee el header <code>Origin</code> establecido por el navegador y compara el hostname contra el arreglo <code>domains</code> del registro KV <code>auth:&lt;key&gt;</code> del cliente. La comparación es <strong>strict-suffix, case-insensitive</strong>:',
+          'docs.sec.va.p4':'Una entrada <code>domains</code> de <code>miramarfl.gov</code> autoriza <code>https://miramarfl.gov</code> y <code>https://www.miramarfl.gov</code>, pero <strong>rechaza</strong> <code>https://miramarfl.gov.evil.com</code> — el punto inicial del sufijo bloquea ataques de prefijo hermano.',
+          'docs.sec.va.p5':'<strong>Modo de falla:</strong> el Worker devuelve <code>403 Forbidden</code> con cuerpo opaco <code>{ "error": "forbidden" }</code> y <strong>sin</strong> header <code>Access-Control-Allow-Origin</code>. El navegador muestra error CORS; <code>embed.js</code> silenciosamente no renderiza la burbuja. Sin señal sobre si la llave existe, el dominio es incorrecto, o el trial expiró.',
+          'docs.sec.vb.p1':'<strong>Amenaza:</strong> la IA — por alucinación o por inyección de prompt vía DOM — emite una llamada de herramienta <code>navigate_to(https://phishing.example.com)</code> que exfiltra al usuario a un destino malicioso.',
+          'docs.sec.vb.p2':'<strong>Capa:</strong> Navegación / ejecución de herramientas',
+          'docs.sec.vb.p3':'<code>embed.js</code> aplica un sandbox de URL en el cliente <strong>antes</strong> de cualquier navegación o clic en anchor. La allowlist llega en la respuesta inicial de <code>/v1/session</code> y se cachea en el closure — cero round-trips de red adicionales durante la llamada.',
+          'docs.sec.vb.p4':'El sandbox protege dos superficies:',
+          'docs.sec.vb.l1':'<strong><code>navigate_to(url)</code></strong> — la llamada de herramienta explícita',
+          'docs.sec.vb.l2':'<strong><code>click_element(selector)</code></strong> — cuando el nodo DOM resuelto es un <code>&lt;a href&gt;</code> o descendiente. El gate se limita a protocolos HTTP(S); <code>mailto:</code>, <code>tel:</code>, <code>javascript:</code> y hrefs vacíos pasan sin filtro.',
+          'docs.sec.vb.tip':'<strong>Los destinos cross-origin</strong> deben ser explícitos. Añade entradas a <code>policy:&lt;key&gt;.external_domains</code> para portales de proveedores, bolsas de empleo o cualquier destino externo permitido. Las URLs same-origin y fragmentos siempre se permiten.',
+          'docs.sec.vc.p1':'<strong>Amenaza:</strong> incluso si un token residente en el navegador se filtra vía DevTools o una extensión maliciosa, su blast radius debe estar acotado — único assistant, único org, TTL corto.',
+          'docs.sec.vc.p2':'<strong>Capa:</strong> Autenticación / autorización',
+          'docs.sec.vc.p3':'El Worker firma JWTs HS256 usando Web Crypto API. Sin librerías de terceros; la firma ocurre en el edge usando <code>crypto.subtle.sign(\'HMAC\', …)</code> con <code>VAPI_PRIVATE_KEY</code> como secreto.',
+          'docs.sec.vc.p4':'Tres decisiones de diseño reducen el blast radius en un token filtrado:',
+          'docs.sec.vc.t1':'Decisión','docs.sec.vc.t2':'Efecto en un token filtrado',
+          'docs.sec.vc.r1':'Solo puede iniciar llamadas de voz por navegador. No puede mutar assistants, exportar historial de llamadas o tocar la superficie de admin REST. El tag <code>"private"</code> está reservado para admin del servidor y este Worker <strong>nunca</strong> lo emite.',
+          'docs.sec.vc.r2':'El token solo puede iniciar una llamada para el único assistant ligado a este cliente. No puede pivotear a un assistant distinto, más costoso, del mismo org.',
+          'docs.sec.vc.r3':'El token expira 15 minutos después de su emisión. Las llamadas en curso sobreviven a la expiración, pero ninguna llamada nueva puede iniciar con un token vencido.',
+          'docs.sec.vc.warn':'La llave privada de Vapi nunca sale del Worker. Se lee desde <code>env.VAPI_PRIVATE_KEY</code> al momento de la petición, se usa para derivar una llave de firma HMAC-SHA-256, y se descarta después de calcular la firma. Nunca se logea, nunca se serializa en respuestas, nunca se expone al cliente.',
+          'docs.sec.vd.p1':'Un complemento al Vector B al nivel del clic. Cuando <code>click_element</code> se invoca sobre un nodo cuyo texto contiene una palabra destructiva (<code>delete</code>, <code>remove</code>, <code>cancel</code>, <code>reset</code>, <code>clear</code>, <code>sign out</code>, <code>log out</code>, <code>logout</code>, <code>unsubscribe</code>, <code>deactivate</code>), <code>embed.js</code> pausa la ejecución y muestra un overlay de confirmación dentro del panel del widget.',
+          'docs.sec.vd.p2':'Dos overrides por cliente via el registro hermano <code>policy:&lt;key&gt;</code>:',
+          'docs.sec.vd.l1':'<code>destructive_keyword_extras</code> — añade palabras. Un banco podría añadir <code>transfer</code>; un CRM podría añadir <code>archive</code>.',
+          'docs.sec.vd.l2':'<code>destructive_keyword_excludes</code> — quita palabras. Un sitio de reservas que usa "Cancel" legítimamente en cada página puede excluirla para evitar fricción.',
+          'docs.sec.vd.p3':'La UI de confirmación vive completamente dentro del widget — sin <code>window.confirm()</code>, sin overlay sobre la página del cliente. El panel cambia a estado confirmación via una clase <code>.confirming</code>, mostrando un botón rojo <code>Confirmar</code> y gris <code>Cancelar</code>. La cancelación devuelve <code>user_cancelled_destructive</code> al LLM, que continúa la conversación naturalmente.',
+          'docs.sec.rot.p1':'GitGuardian y escáneres equivalentes de secretos alertarán sobre cualquier valor de llave Vapi commiteado al repositorio, incluso transitoriamente en historial viejo. El procedimiento oficial de rotación:',
+          'docs.sec.rot.s1':'<strong>En menos de 5 minutos tras la alerta:</strong> abre el dashboard de Vapi, localiza la llave filtrada, haz click en <strong>Regenerate</strong>. El valor filtrado se invalida a nivel de cuenta Vapi inmediatamente — las llamadas firmadas con la llave vieja dejan de funcionar globalmente.',
+          'docs.sec.rot.s2':'<strong>Actualiza el secreto del Worker:</strong> desde <code>worker/</code>, ejecuta <code>wrangler secret put VAPI_PRIVATE_KEY</code> y pega el nuevo valor en el prompt. Workers hot-reload de secretos — sin redeploy necesario.',
+          'docs.sec.rot.s3':'<strong>Actualiza cualquier superficie no-Worker</strong> que aún hardcodee una llave. Commit con prefijo <code>security:</code>.',
+          'docs.sec.rot.s4':'<strong>Resuelve la alerta como "Secret rotated"</strong> en GitGuardian. Documenta la respuesta. NO marques como "False positive" — la rotación es la remediación correcta.',
+          'docs.sec.rot.s5':'<strong>No reescribas el git history.</strong> Una vez rotado el secreto en la fuente de verdad, el valor filtrado es inerte. Reescribir history es destructivo, rompe cada clone existente y rara vez vale el costo operacional.',
+          'docs.sec.rot.warn':'<strong>Never-Hardcode Policy:</strong> las llaves privadas de Vapi, org IDs, registros auth de cliente, y JWTs por llamada NUNCA deben aparecer como string literals en JavaScript que se envía al navegador. Viven exclusivamente como secretos de Cloudflare Worker y registros KV.',
           'docs.s.quickstart':'Inicio Rápido','docs.s.install':'Instalación',
           'docs.s.verify':'Verificar que Funciona','docs.s.how':'Cómo Funciona',
           'docs.s.semantic':'Mapa Semántico','docs.s.pipeline':'Pipeline de Herramientas',
